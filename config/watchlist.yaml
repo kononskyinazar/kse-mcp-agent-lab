@@ -1,0 +1,30 @@
+# Buyers screened by the agent, and the allow-list the harvest sweep filters on.
+#
+# Chosen from a measured 24-hour feed slice (see data/manifest.json and
+# docs/upgrade-review.md): ordinary civilian buyers - municipal utilities, a
+# municipal hospital, a university - with steady competitive procurement. These
+# are the kinds of buyer procurement monitors actually watch. No defence or
+# security bodies are included.
+#
+# EDRPOU is the Ukrainian legal-entity registration code and is public data.
+
+window:
+  # Sized from the measurement pass: the feed carries ~22,500 rows/day, so each
+  # day of window costs ~23 feed requests at 1000 rows per page.
+  sweep_days: 30
+  observed_feed_rows_per_day: 22559
+  measured_on: 2026-08-19
+
+buyers:
+  - edrpou: "03327121"
+    name: Комунальне підприємство "Водоканал"
+    sector: municipal water utility
+  - edrpou: "01999218"
+    name: Комунальне некомерційне підприємство "Гадяцька міська центральна лікарня"
+    sector: municipal hospital
+  - edrpou: "31557119"
+    name: Комунальне підприємство "Харківські теплові мережі"
+    sector: municipal district heating
+  - edrpou: "02070944"
+    name: Київський національний університет імені Тараса Шевченка
+    sector: higher education

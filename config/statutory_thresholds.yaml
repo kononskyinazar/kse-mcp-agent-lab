@@ -1,0 +1,74 @@
+# Statutory thresholds and minimum periods, versioned by effective date.
+#
+# Rules look these up by the tender's noticePublicationDate, never by "today":
+# applying a current rule to a tender published under an earlier regime would
+# manufacture violations that never happened.
+#
+# Every entry carries its source. Entries marked `verification: primary` were
+# read from the official text at zakon.rada.gov.ua; entries marked `secondary`
+# were taken from procurement-practice publications because the official page
+# could not be retrieved in full, and MUST be confirmed against the official
+# text before the defence. Nothing here is written from memory.
+
+version: 2026-08-19
+classifier: "ДК 021:2015 (CPV)"
+
+regimes:
+  - id: osoblyvosti-1178
+    name: Особливості здійснення публічних закупівель (КМУ № 1178 від 12.10.2022)
+    effective_from: 2022-10-19
+    effective_to: null   # ASSUMPTION: martial-law regime still in force; verify before the defence
+    source: https://zakon.rada.gov.ua/laws/show/1178-2022-%D0%BF
+
+    # Values at or above which the buyer must run відкриті торги з особливостями.
+    # Below them the purchase may be made without the electronic system, which
+    # is what a `reporting` record usually is.
+    mandatory_open_tender_from:
+      - subject: goods_and_services
+        amount_uah: 100000
+        excludes: послуги з поточного ремонту
+        source_point: "пункт 10"
+        verification: primary
+      - subject: current_repair_services
+        amount_uah: 200000
+        source_point: "пункт 10"
+        verification: primary
+      - subject: works
+        amount_uah: 1500000
+        source_point: "пункт 10"
+        verification: primary
+
+    # Below this value even a report to the system is not mandatory.
+    reporting_optional_below:
+      amount_uah: 50000
+      source_point: "пункт 11"
+      verification: primary
+
+    # Minimum bid submission period, counted from publication of the notice.
+    minimum_tender_period_days:
+      - subject: goods_and_services
+        days: 7
+        verification: secondary
+        source: https://infobox.prozorro.org/articles/zmini-do-postanovi-1178-vid-9-kvitnya-2024
+      - subject: works
+        days: 14
+        effective_from: 2024-04-19   # introduced by the April 2024 amendments
+        verification: secondary
+        source: https://dozorro.org/blog/12-kvitnevih-zmin-do-zakupivelnih-pravil
+      - subject: works
+        days: 7
+        effective_from: 2022-10-19
+        effective_to: 2024-04-18
+        verification: secondary
+        source: https://dozorro.org/blog/12-kvitnevih-zmin-do-zakupivelnih-pravil
+
+    # Tolerance applied before the bid-window rule fires, in days. Publication
+    # and period start can differ by hours for legitimate reasons, and the rule
+    # must accuse only when the gap is unambiguous.
+    tender_period_tolerance_days: 0.5
+
+# Mapping from the tender's mainProcurementCategory to the subject used above.
+category_map:
+  goods: goods_and_services
+  services: goods_and_services
+  works: works

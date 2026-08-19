@@ -1,0 +1,96 @@
+# Red-flag rules: identifiers, weights, bounds and applicability.
+#
+# `blocking` is reserved for a breach of a written rule that can be cited.
+# Everything merely suspicious is an advisory, however strongly weighted:
+# a single bidder is lawful in Ukraine, and calling it a violation would put a
+# false accusation into a note a human may forward.
+#
+# Scoring is a linear weighted sum clamped to 0-100. Weights are judgement, not
+# calibration against confirmed cases - which is exactly why every firing rule
+# reports its weight and contribution in the evidence chain, so a reviewer can
+# disagree with a number instead of with a verdict.
+
+version: 2026-08-19
+
+scoring:
+  max_score: 100
+  # A blocking violation lifts the score to this floor, so a statutory breach
+  # with no other signals cannot slip under the human-review threshold.
+  blocking_floor: 80
+  human_review_threshold: 60
+
+rules:
+  bid_window_below_statutory_minimum:
+    class: blocking
+    weight: 40
+    title: Bid submission period shorter than the statutory minimum
+
+  procedure_value_threshold_mismatch:
+    class: blocking
+    weight: 40
+    title: Procedure inconsistent with the value thresholds in force
+
+  effective_single_participation:
+    class: advisory
+    weight: 25
+    title: Competitive procedure that drew a single effective bid
+
+  award_ratio_no_discount:
+    class: advisory
+    weight: 12
+    title: Award price at or above the expected value
+    ratio_at_or_above: 0.98
+
+  award_ratio_lowball:
+    class: advisory
+    weight: 10
+    title: Award price far below the expected value
+    ratio_below: 0.70
+
+  bid_timing_compressed:
+    class: advisory
+    weight: 12
+    title: All bids submitted in the final minutes before the deadline
+    window_minutes: 15
+    minimum_bids: 2
+
+  losing_bidder_in_subcontracting:
+    class: advisory
+    weight: 18
+    title: A losing bidder is named in the winner's subcontracting details
+
+  supplier_new_to_dataset:
+    class: advisory
+    weight: 10
+    title: Winning supplier first appears in the dataset shortly before this notice
+    days_before_notice: 90
+
+  brand_without_equivalence:
+    class: advisory
+    weight: 14
+    title: Brand or model reference without equivalence wording
+    # Ukrainian procurement rules require an "or equivalent" formulation when a
+    # specification names a concrete make or model.
+    equivalence_markers:
+      - або еквівалент
+      - або еквівалентний
+      - чи еквівалент
+      - or equivalent
+
+  cancelled_after_award:
+    class: advisory
+    weight: 16
+    title: Procedure cancelled after a winner had been selected
+
+  cancel_and_reissue:
+    class: advisory
+    weight: 14
+    title: Cancelled and reissued with a similar scope
+    reissue_within_days: 60
+    value_band: 0.25
+
+  supplier_win_streak:
+    class: advisory
+    weight: 16
+    title: Winning supplier holds a run of consecutive awards from this buyer
+    minimum_streak: 3
