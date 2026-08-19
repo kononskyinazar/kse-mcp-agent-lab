@@ -52,6 +52,10 @@ with an empty collection and an explicit `result_count: 0`.
 | `FIXTURE_MISSING` | Offline/replay mode requested a recording that does not exist | No | Demo data gap |
 | `DATA_INTEGRITY` | Source data present but violates an invariant the tool relies on | No | Corrupt or unexpected upstream payload |
 
+`INVALID_INPUT` and a successful `result_count: 0` are the pair the assignment cares about
+most: a bad EDRPOU is an error, a valid EDRPOU with no matching tenders is a success with
+an empty collection. No response can be read both ways.
+
 ---
 
 ## Existing server (Part A) - documented tool

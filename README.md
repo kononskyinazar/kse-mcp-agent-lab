@@ -29,6 +29,7 @@ step are edges in the graph rather than hints in a prompt.
 | `config/` | MCP connection configuration; `*.local.json` is git-ignored |
 | `data/` | Prepared local dataset used as deterministic demo input |
 | `fixtures/` | Recorded genuine API responses for offline replay |
+| `demo-vault/` | Committed Obsidian demonstration vault: watchlist and findings notes |
 | `tests/` | Tests (encouraged, not required by the assignment) |
 | `scripts/` | Helper scripts: fixture recording, dataset preparation |
 | `docs/` | Assignment copy, tool contracts, design rationale, defence checklist |
