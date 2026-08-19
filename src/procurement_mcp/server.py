@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import threading
 from typing import Any, Callable
 
 import anyio
@@ -54,6 +55,9 @@ class ToolHost:
     def __init__(self, config: Configuration | None = None) -> None:
         self._config = config
         self._store: DatasetStore | None = None
+        # Tool calls run on worker threads and a lookup outside the dataset
+        # mutates the store, so access is serialised.
+        self._lock = threading.Lock()
 
     @property
     def config(self) -> Configuration:
@@ -101,12 +105,29 @@ class ToolHost:
                 {"available_tools": sorted(TOOLS)},
             )
         _, runner = entry
-        return runner(self.config, self.store, arguments or {})
+        with self._lock:
+            return runner(self.config, self.store, arguments or {})
+
+
+def _summarise(payload: dict[str, Any]) -> str:
+    """One readable line for the text part.
+
+    The full object travels as structured content; repeating it verbatim as text
+    would send every response twice.
+    """
+    if payload.get("status") == "error":
+        error = payload.get("error") or {}
+        return f"error {error.get('code')}: {error.get('message')}"
+    parts = []
+    for key in ("result_count", "total_matched", "risk_score", "has_blocking", "compliant"):
+        if key in payload:
+            parts.append(f"{key}={payload[key]}")
+    return "ok" + (" (" + ", ".join(parts) + ")" if parts else "")
 
 
 def _result(payload: dict[str, Any], *, is_error: bool = False) -> types.CallToolResult:
     return types.CallToolResult(
-        content=[types.TextContent(type="text", text=json.dumps(payload, ensure_ascii=False, indent=2))],
+        content=[types.TextContent(type="text", text=_summarise(payload))],
         structured_content=payload,
         is_error=is_error,
     )

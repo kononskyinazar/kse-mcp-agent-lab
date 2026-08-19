@@ -351,3 +351,65 @@ def test_a_tender_id_cannot_be_fetched_upstream_and_says_why(tmp_path):
 
     assert excinfo.value.code == ErrorCode.NOT_FOUND
     assert "document UUID" in excinfo.value.details["hint"]
+
+
+# --- isolation of fetched tenders ------------------------------------------
+
+def test_a_fetched_tender_does_not_join_the_dataset(tmp_path):
+    """Otherwise a replay lookup silently changes later concentration numbers."""
+    from procurement_mcp.http import ReplayClient, fixture_key
+    from procurement_mcp.store import DatasetStore
+
+    uuid = "c" * 32
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    outsider = tender_doc(uuid=uuid, tender_id="UA-outsider", buyer_edrpou="03327121",
+                          amount=900_000.0, awards=[award(edrpou="48888888", amount=900_000.0)])
+    (fixtures / fixture_key(f"/tenders/{uuid}", None)).write_text(
+        json.dumps({"data": outsider}, ensure_ascii=False), encoding="utf-8"
+    )
+    make_store(tmp_path, [tender_doc(uuid="inside", tender_id="UA-inside",
+                                     awards=[award(edrpou="40000001")])])
+    store = DatasetStore(tmp_path, client=ReplayClient(fixtures)).load()
+    config = make_config(tmp_path)
+
+    before = concentration.run(config, store, {"buyer_edrpou": "03327121"})
+    screen.run(config, store, {"tender_identifier": uuid})
+    after = concentration.run(config, store, {"buyer_edrpou": "03327121"})
+
+    assert before == after, "a lookup outside the dataset must not change dataset answers"
+    assert find.run(config, store, {})["total_matched"] == 1
+    assert store.data_window().tender_count == 1
+
+
+def test_screen_reports_where_the_tender_came_from(tmp_path):
+    from procurement_mcp.http import ReplayClient, fixture_key
+    from procurement_mcp.store import DatasetStore
+
+    uuid = "d" * 32
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    (fixtures / fixture_key(f"/tenders/{uuid}", None)).write_text(
+        json.dumps({"data": tender_doc(uuid=uuid, tender_id="UA-replayed")}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    make_store(tmp_path, [tender_doc(uuid="inside", tender_id="UA-inside")])
+    store = DatasetStore(tmp_path, client=ReplayClient(fixtures)).load()
+    config = make_config(tmp_path)
+
+    assert screen.run(config, store, {"tender_identifier": "UA-inside"})["tender_source"] == "prepared_dataset"
+    assert screen.run(config, store, {"tender_identifier": uuid})["tender_source"] == "offline_replay"
+
+
+def test_find_does_not_echo_the_exclusion_list_back(world):
+    config, store = world
+    result = find.run(config, store, {"exclude_tender_ids": ["UA-alpha-1", "UA-alpha-2"]})
+
+    assert result["filters_applied"]["exclude_tender_ids"] == "2 tender ids"
+
+
+def test_undated_tenders_sort_last_not_first(world):
+    config, store = world
+    result = find.run(config, store, {})
+
+    assert result["tenders"][0]["published_at"] is not None

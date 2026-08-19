@@ -174,7 +174,28 @@ the rule rather than by tuning a number:
 After the corrections: 280 of 533 tenders score zero, 19 land at 80 or above, one genuine
 short-bid-window breach and 18 procedure/threshold mismatches remain.
 
-## 9. What the live integration changed
+## 9. What review and live use changed
+
+A review of the finished code found six correctness defects that the tests as written could
+not have caught, and each is worth naming because each was a wrong idea rather than a typo:
+
+- **A tender fetched from a fixture or the live API was being indexed into the prepared
+  dataset**, so running the replay demo before the concentration demo changed the
+  concentration numbers. Fetched records are now held apart, and the screening result says
+  which of the two it came from.
+- **A refusal at the human gate left no trace at all** - no note, and no log entry either -
+  so the next run asked the same question again. A refusal is now recorded as a decision.
+- **A competitive tender that nobody bid on was skipped** as unjudgeable, while one that
+  drew a single bidder was flagged. The dataset holds 33 of them.
+- **A joint award broke every streak**: two suppliers on one award produced two adjacent
+  events with different codes, so a consortium winning repeatedly reported no streak.
+  Streaks now count tenders, not supplier rows.
+- **The trend direction compared only the first and last month**, so a spike in the middle
+  read as stable. It is now a least-squares slope, and months with no awards are listed
+  rather than silently closing the gap.
+- **Any non-empty resume value approved the write**, because `bool("no")` is true.
+
+## 10. What the live integration changed
 
 Three things only appeared once the agent talked to a real Obsidian:
 
@@ -188,7 +209,7 @@ Three things only appeared once the agent talked to a real Obsidian:
   client classifies that text (`ENDPOINT_UNREACHABLE`, `UNAUTHORIZED`, `NOT_FOUND`) and
   keeps the original message, because "UNKNOWN: no message" is useless at a defence.
 
-## 10. Known limitations
+## 11. Known limitations
 
 1. Supplier newness is a dataset-horizon proxy, not a registration date.
 2. Shell-bidding detection matches free text and can never block.
@@ -202,7 +223,7 @@ Three things only appeared once the agent talked to a real Obsidian:
 8. The agent screens what the watchlist names; it does not discover new buyers.
 9. A high score is a prompt for human review, never a conclusion of wrongdoing.
 
-## 11. Assumptions
+## 12. Assumptions
 
 1. The martial-law procurement regime (CMU 1178) is still in force on the tenders in the
    dataset. If it were superseded, `config/statutory_thresholds.yaml` gains a regime with a

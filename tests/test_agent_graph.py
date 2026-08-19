@@ -258,13 +258,31 @@ async def test_low_score_without_blocking_skips_the_gate():
     assert any("findings_" in path for path, _ in obsidian.writes)
 
 
-async def test_rejection_at_the_gate_writes_nothing():
+async def test_rejection_writes_no_finding_but_still_records_the_decision():
     obsidian = obsidian_stub()
     deps = make_deps(obsidian, procurement_stub(risk_score=90.0))
     state = await run_graph(deps, resume={"approved": False}, thread="reject")
 
     assert state["review_decision"]["approved"] is False
-    assert obsidian.writes == []
+    assert [p for p, _ in obsidian.writes if "findings_" in p and "_run-log" not in p] == []
+    # A refusal is a decision. Without a log entry the next run re-screens the
+    # same tenders and asks the same question.
+    path, content = obsidian.writes[-1]
+    assert path.endswith("_run-log.md")
+    assert "- decision: declined" in content
+
+
+async def test_only_an_explicit_yes_approves():
+    """bool("no") is True, and this gate guards an allegation."""
+    from agent.graph import _is_approval
+
+    assert _is_approval(True) is True
+    assert _is_approval({"approved": True}) is True
+    assert _is_approval({"approved": "yes"}) is True
+    assert _is_approval({"approved": "no"}) is False
+    assert _is_approval("no") is False
+    assert _is_approval(["anything"]) is False
+    assert _is_approval(None) is False
 
 
 async def test_approval_writes_the_note_then_patches_the_watchlist_state():

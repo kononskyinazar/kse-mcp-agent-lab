@@ -100,6 +100,7 @@ OUTPUT_SCHEMA: dict[str, Any] = {
         "evidence_chain": {"type": "array", "items": {"type": "object"}},
         "rules_not_applicable": {"type": "array", "items": {"type": "object"}},
         "rules_errored": {"type": "array", "items": {"type": "object"}},
+        "tender_source": {"type": "string", "enum": ["prepared_dataset", "offline_replay", "live_api", "unknown"]},
         "data_window": {"type": "object"},
         "provenance": {"type": "object"},
     },
@@ -151,6 +152,7 @@ def run(config: Configuration, store: DatasetStore, arguments: dict[str, Any]) -
         "advisories": [f.to_payload() for f in result.advisories],
         "rules_not_applicable": [s.to_payload() for s in result.skipped],
         "rules_errored": result.errored,
+        "tender_source": store.source_of(tender.uuid),
         "data_window": store.data_window().to_payload(),
         "provenance": config.provenance(),
     }

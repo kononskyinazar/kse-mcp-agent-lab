@@ -14,6 +14,10 @@ from datetime import timedelta
 from ..models import Tender
 from .base import Finding, RuleContext
 
+# Statuses at which a competitive procedure has finished, whether or not it
+# produced an award.
+CONCLUDED_STATUSES = frozenset({"complete", "unsuccessful", "cancelled"})
+
 # A make or model looks like a Latin-script token or an alphanumeric model code
 # inside otherwise Cyrillic procurement text.
 BRAND_TOKEN = re.compile(r"\b(?:[A-Z][A-Za-z]{2,}(?:[- ]?\d{1,4}[A-Za-z]?)?|[A-Z]{2,}\d{2,})\b")
@@ -138,8 +142,11 @@ class EffectiveSingleParticipation:
             return f"procedure {tender.procedure_type!r} awards directly, so a single participant is by design"
         if tender.status in {"active.tendering", "active.enquiries", "draft"}:
             return f"status {tender.status!r} is before bid opening, so participation is not yet observable"
-        if not tender.awards:
-            return "no award yet, so participation cannot be judged"
+        # An award, or a concluded status, means participation is observable. A
+        # tender that ended with no award at all is the strongest participation
+        # failure there is, and an earlier version skipped every one of them.
+        if not tender.awards and tender.status not in CONCLUDED_STATUSES:
+            return f"status {tender.status!r} has produced neither an award nor a conclusion yet"
         return None
 
     def check(self, ctx: RuleContext) -> Finding | None:
@@ -154,7 +161,12 @@ class EffectiveSingleParticipation:
             evidence={
                 "procedure_type": tender.procedure_type,
                 "status": tender.status,
-                "note": "lawful in Ukraine; weighted as a risk indicator, not as a violation",
+                "outcome": "no award" if not tender.awards else "awarded",
+                "note": (
+                    "no bids at all: the procedure drew no participants"
+                    if count == 0
+                    else "lawful in Ukraine; weighted as a risk indicator, not as a violation"
+                ),
             },
         )
 

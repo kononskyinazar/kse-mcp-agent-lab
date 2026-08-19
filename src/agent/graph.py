@@ -64,22 +64,46 @@ class AgentDeps:
     require_approval: bool = True
     today: date = field(default_factory=lambda: datetime.now(UTC).date())
 
+    _vault: ObsidianVault | None = field(default=None, repr=False, compare=False)
+
     @property
     def vault(self) -> ObsidianVault:
-        return ObsidianVault(self.hub[self.obsidian_server])
+        if self._vault is None:
+            object.__setattr__(self, "_vault", ObsidianVault(self.hub[self.obsidian_server]))
+        return self._vault
 
     @property
     def procurement(self):
         return self.hub[self.procurement_server]
 
 
-def _error(stage: str, exc: Exception) -> dict[str, Any]:
+def _is_approval(decision: Any) -> bool:
+    """Only an explicit yes approves.
+
+    Anything else - a bare string, a list, {"approved": "no"} - is a refusal.
+    bool("no") is True, and this gate exists to stop an allegation reaching the
+    vault without assent.
+    """
+    if isinstance(decision, dict):
+        decision = decision.get("approved")
+    if isinstance(decision, bool):
+        return decision
+    if isinstance(decision, str):
+        return decision.strip().casefold() in {"y", "yes", "true", "approve", "approved"}
+    return False
+
+
+def _error(stage: str, exc: Exception, buyer_edrpou: str | None = None) -> dict[str, Any]:
+    """Errors carry the buyer they belong to, so notes cannot inherit each other's."""
+    record: dict[str, Any] = {"stage": stage, "buyer_edrpou": buyer_edrpou}
     if isinstance(exc, MCPToolFailure):
-        return {"stage": stage, "kind": "tool_failure", "server": exc.server,
-                "tool": exc.tool, "code": exc.code, "message": exc.detail}
-    if isinstance(exc, MCPConnectionError):
-        return {"stage": stage, "kind": "connection", "server": exc.server, "message": exc.message}
-    return {"stage": stage, "kind": exc.__class__.__name__, "message": str(exc)}
+        record.update({"kind": "tool_failure", "server": exc.server, "tool": exc.tool,
+                       "code": exc.code, "message": exc.detail})
+    elif isinstance(exc, MCPConnectionError):
+        record.update({"kind": "connection", "server": exc.server, "message": exc.message})
+    else:
+        record.update({"kind": exc.__class__.__name__, "message": str(exc)})
+    return record
 
 
 def build_graph(deps: AgentDeps):
@@ -169,7 +193,7 @@ def build_graph(deps: AgentDeps):
                     "compute_buyer_supplier_concentration", {"buyer_edrpou": edrpou}
                 )
             except (MCPToolFailure, MCPConnectionError) as exc:
-                errors.append(_error(f"buyer_context[{edrpou}]", exc))
+                errors.append(_error(f"buyer_context[{edrpou}]", exc, edrpou))
         return {"buyer_context": context, "errors": errors}
 
     async def select(state: RunState) -> RunState:
@@ -189,7 +213,7 @@ def build_graph(deps: AgentDeps):
             try:
                 result = await deps.procurement.call("find_tenders", arguments)
             except (MCPToolFailure, MCPConnectionError) as exc:
-                errors.append(_error(f"select[{entry['buyer_edrpou']}]", exc))
+                errors.append(_error(f"select[{entry['buyer_edrpou']}]", exc, entry["buyer_edrpou"]))
                 continue
             for tender in result.get("tenders", []):
                 candidates.append({**tender, "plan_rationale": entry.get("rationale"), "filters": arguments})
@@ -201,6 +225,7 @@ def build_graph(deps: AgentDeps):
 
         for candidate in state.get("candidates") or []:
             identifier = candidate.get("tender_id") or candidate.get("uuid")
+            buyer_edrpou = (candidate.get("buyer") or {}).get("edrpou")
             record: dict[str, Any] = {"tender": candidate, "identifier": identifier}
             # Threshold compliance runs for every tender, not only for ones that
             # tripped something else: a threshold breach is itself a top signal
@@ -212,7 +237,7 @@ def build_graph(deps: AgentDeps):
                 try:
                     record[key] = await deps.procurement.call(tool, {"tender_identifier": identifier})
                 except (MCPToolFailure, MCPConnectionError) as exc:
-                    record[f"{key}_error"] = _error(f"{tool}[{identifier}]", exc)
+                    record[f"{key}_error"] = _error(f"{tool}[{identifier}]", exc, buyer_edrpou)
                     errors.append(record[f"{key}_error"])
             screened.append(record)
 
@@ -242,8 +267,21 @@ def build_graph(deps: AgentDeps):
                 "run_id": state.get("run_id"),
             }
         )
-        approved = bool(decision.get("approved")) if isinstance(decision, dict) else bool(decision)
-        return {"review_decision": {"approved": approved, "raw": decision}}
+        return {"review_decision": {"approved": _is_approval(decision), "raw": decision}}
+
+    async def record_refusal(state: RunState) -> RunState:
+        """A refusal is a decision, and it belongs in the log.
+
+        Without this the run ends silently: the next run re-screens the same
+        tenders and asks the same question, with nothing in the vault to say a
+        person already answered it.
+        """
+        errors: list[dict[str, Any]] = []
+        try:
+            await _append_run_log(deps, state, decision="declined")
+        except (MCPToolFailure, MCPConnectionError) as exc:
+            errors.append(_error("append_run_log", exc))
+        return {"written": [], "errors": errors}
 
     async def compose(state: RunState) -> RunState:
         notes: list[dict[str, Any]] = []
@@ -265,7 +303,7 @@ def build_graph(deps: AgentDeps):
                     for r in state.get("screened") or []
                     if ((r.get("tender") or {}).get("buyer") or {}).get("edrpou") == edrpou
                 ),
-                "errors": [e for e in state.get("errors") or [] if edrpou in json.dumps(e)],
+                "errors": [e for e in state.get("errors") or [] if e.get("buyer_edrpou") == edrpou],
             }
             response = await deps.model.ainvoke(
                 [
@@ -339,7 +377,7 @@ def build_graph(deps: AgentDeps):
         return "human_review" if deps.require_approval else "compose"
 
     def route_after_review(state: RunState) -> str:
-        return "compose" if (state.get("review_decision") or {}).get("approved") else END
+        return "compose" if (state.get("review_decision") or {}).get("approved") else "record_refusal"
 
     graph = StateGraph(RunState)
     graph.add_node("discover", discover)
@@ -349,6 +387,7 @@ def build_graph(deps: AgentDeps):
     graph.add_node("select", select)
     graph.add_node("screen", screen)
     graph.add_node("human_review", human_review)
+    graph.add_node("record_refusal", record_refusal)
     graph.add_node("compose", compose)
     graph.add_node("write_back", write_back)
 
@@ -359,7 +398,8 @@ def build_graph(deps: AgentDeps):
     graph.add_edge("buyer_context", "select")
     graph.add_edge("select", "screen")
     graph.add_conditional_edges("screen", route_after_screening, ["human_review", "compose"])
-    graph.add_conditional_edges("human_review", route_after_review, ["compose", END])
+    graph.add_conditional_edges("human_review", route_after_review, ["compose", "record_refusal"])
+    graph.add_edge("record_refusal", END)
     graph.add_edge("compose", "write_back")
     graph.add_edge("write_back", END)
     return graph
@@ -371,7 +411,7 @@ def _render_frontmatter(data: dict[str, Any]) -> str:
     return "---\n" + yaml.safe_dump(data, allow_unicode=True, sort_keys=False) + "---\n"
 
 
-async def _append_run_log(deps: AgentDeps, state: RunState) -> None:
+async def _append_run_log(deps: AgentDeps, state: RunState, *, decision: str = "written") -> None:
     """Record what this run judged so the next run skips it."""
     screened = [r["identifier"] for r in state.get("screened") or [] if r.get("identifier")]
     flagged = [r["identifier"] for r in state.get("flagged") or [] if r.get("identifier")]
@@ -383,4 +423,5 @@ async def _append_run_log(deps: AgentDeps, state: RunState) -> None:
         buyers=buyers,
         screened=screened,
         flagged=flagged,
+        decision=decision,
     )

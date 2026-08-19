@@ -495,6 +495,7 @@ Response, produced by running the tool against the committed dataset:
 | `evidence_chain` | array |  |
 | `rules_not_applicable` | array |  |
 | `rules_errored` | array |  |
+| `tender_source` | string |  |
 | `data_window` | object |  |
 | `provenance` | object |  |
 
@@ -584,6 +585,7 @@ Response, produced by running the tool against the committed dataset:
       "evidence": {
         "procedure_type": "aboveThreshold",
         "status": "active.awarded",
+        "outcome": "awarded",
         "note": "lawful in Ukraine; weighted as a risk indicator, not as a violation"
       }
     }

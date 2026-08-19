@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Iterable
 
 from .models import Tender
@@ -59,7 +59,11 @@ def award_sequence(tenders: Iterable[Tender]) -> list[AwardEvent]:
                     cpv_groups=tuple(sorted(tender.cpv_groups)),
                 )
             )
-    events.sort(key=lambda e: (e.moment or datetime.min.replace(tzinfo=None).astimezone(), e.uuid))
+    # Undated events sort first against a fixed aware sentinel. Converting
+    # datetime.min to local time, as an earlier version did, raises OverflowError
+    # on some platforms and would take the whole concentration call down.
+    sentinel = datetime.min.replace(tzinfo=timezone.utc)
+    events.sort(key=lambda e: (e.moment or sentinel, e.uuid))
     return events
 
 
@@ -143,44 +147,105 @@ def monthly_trend(events: list[AwardEvent]) -> dict[str, Any]:
             }
         )
 
-    direction, magnitude = "insufficient_data", None
+    # Direction comes from a least-squares slope over every bucket, not from
+    # first-versus-last: a buyer whose concentration spikes in the middle and
+    # returns would otherwise be reported as "stable".
+    direction, magnitude, slope = "insufficient_data", None, None
     if len(series) >= 2:
-        magnitude = round(series[-1]["hhi_by_value"] - series[0]["hhi_by_value"], 4)
-        if abs(magnitude) < 0.05:
+        values = [b["hhi_by_value"] for b in series]
+        n = len(values)
+        mean_x = (n - 1) / 2
+        mean_y = sum(values) / n
+        denominator = sum((i - mean_x) ** 2 for i in range(n))
+        slope = round(sum((i - mean_x) * (v - mean_y) for i, v in enumerate(values)) / denominator, 5)
+        magnitude = round(values[-1] - values[0], 4)
+        if abs(slope) < 0.02:
             direction = "stable"
         else:
-            direction = "increasing" if magnitude > 0 else "decreasing"
+            direction = "increasing" if slope > 0 else "decreasing"
+
+    # Buckets exist only for months that had awards, so the series can be
+    # non-contiguous. Saying so keeps "periods_analyzed: 2" from reading as two
+    # consecutive months when it may span half a year.
+    months_spanned = None
+    gaps: list[str] = []
+    if series:
+        first_year, first_month = (int(p) for p in series[0]["month"].split("-"))
+        last_year, last_month = (int(p) for p in series[-1]["month"].split("-"))
+        months_spanned = (last_year - first_year) * 12 + (last_month - first_month) + 1
+        present = {b["month"] for b in series}
+        for offset in range(months_spanned):
+            year, month = divmod((first_year * 12 + first_month - 1) + offset, 12)
+            label = f"{year:04d}-{month + 1:02d}"
+            if label not in present:
+                gaps.append(label)
 
     return {
         "buckets": series,
         "periods_analyzed": len(series),
+        "months_spanned": months_spanned,
+        "months_without_awards": gaps,
         "direction": direction,
         "magnitude": magnitude,
+        "slope_per_month": slope,
         "note": (
             "fewer than three buckets is a hint, not a trend"
             if len(series) < 3
-            else "monthly buckets over the dataset window"
+            else "monthly buckets over the dataset window; direction is a least-squares slope"
         ),
     }
+
+
+def _tender_sequence(events: list[AwardEvent]) -> list[dict[str, Any]]:
+    """Collapse per-supplier events back into one entry per tender.
+
+    A streak is a run of consecutive *tenders* won by a supplier. Walking the
+    raw event list instead would let a joint award - which emits one event per
+    supplier - break every run, so a buyer awarding everything to the same pair
+    of firms would report no streak at all.
+    """
+    order: list[str] = []
+    grouped: dict[str, dict[str, Any]] = {}
+    for event in events:
+        entry = grouped.get(event.uuid)
+        if entry is None:
+            order.append(event.uuid)
+            entry = grouped[event.uuid] = {
+                "uuid": event.uuid,
+                "tender_id": event.tender_id or event.uuid,
+                "moment": event.moment,
+                "suppliers": set(),
+                "names": {},
+                "cpv_groups": set(event.cpv_groups),
+            }
+        entry["suppliers"].add(event.supplier_edrpou)
+        if event.supplier_name:
+            entry["names"].setdefault(event.supplier_edrpou, event.supplier_name)
+        entry["cpv_groups"].update(event.cpv_groups)
+    return [grouped[uuid] for uuid in order]
 
 
 def longest_streak(
     events: list[AwardEvent], edrpou: str, *, until: datetime | None = None
 ) -> dict[str, Any]:
-    """The run of consecutive awards this supplier holds, ending at ``until``.
+    """The run of consecutive tenders this supplier has won, ending at ``until``.
 
     Trailing rather than best-ever: what matters when screening one tender is
     whether the same supplier has been winning right up to it.
     """
-    relevant = [e for e in events if until is None or (e.moment is not None and e.moment <= until)]
+    sequence = [
+        t
+        for t in _tender_sequence(events)
+        if until is None or (t["moment"] is not None and t["moment"] <= until)
+    ]
     tender_ids: list[str] = []
     cpv_groups: set[str] = set()
 
-    for event in reversed(relevant):
-        if event.supplier_edrpou != edrpou:
+    for tender in reversed(sequence):
+        if edrpou not in tender["suppliers"]:
             break
-        tender_ids.append(event.tender_id or event.uuid)
-        cpv_groups.update(event.cpv_groups)
+        tender_ids.append(tender["tender_id"])
+        cpv_groups.update(tender["cpv_groups"])
 
     return {
         "length": len(tender_ids),
@@ -190,21 +255,24 @@ def longest_streak(
 
 
 def best_streak(events: list[AwardEvent]) -> dict[str, Any]:
-    """The longest run held by any supplier anywhere in the sequence."""
-    best = {"length": 0, "edrpou": None, "tender_ids": [], "cpv_groups": []}
-    run: list[AwardEvent] = []
+    """The longest run of consecutive tenders held by any one supplier."""
+    sequence = _tender_sequence(events)
+    best: dict[str, Any] = {"length": 0, "edrpou": None, "tender_ids": [], "cpv_groups": []}
+    runs: dict[str, list[dict[str, Any]]] = {}
 
-    for event in events:
-        if run and run[-1].supplier_edrpou == event.supplier_edrpou:
-            run.append(event)
-        else:
-            run = [event]
-        if len(run) > best["length"]:
-            best = {
-                "length": len(run),
-                "edrpou": event.supplier_edrpou,
-                "supplier_name": event.supplier_name,
-                "tender_ids": [e.tender_id or e.uuid for e in run],
-                "cpv_groups": sorted({g for e in run for g in e.cpv_groups}),
-            }
+    for tender in sequence:
+        for edrpou in list(runs):
+            if edrpou not in tender["suppliers"]:
+                runs.pop(edrpou)
+        for edrpou in tender["suppliers"]:
+            runs.setdefault(edrpou, []).append(tender)
+            run = runs[edrpou]
+            if len(run) > best["length"]:
+                best = {
+                    "length": len(run),
+                    "edrpou": edrpou,
+                    "supplier_name": tender["names"].get(edrpou),
+                    "tender_ids": [t["tender_id"] for t in run],
+                    "cpv_groups": sorted({g for t in run for g in t["cpv_groups"]}),
+                }
     return best

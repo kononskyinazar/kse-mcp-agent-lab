@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from datetime import datetime, timezone
+
 from ..config import Configuration
 from ..errors import invalid_input
 from ..models import Tender
@@ -21,6 +23,8 @@ DESCRIPTION = (
     "Zero matches is a successful result with result_count 0. Use it to decide "
     "which tenders to screen; use screen_tender_red_flags to judge one."
 )
+
+MIN_MOMENT = datetime.min.replace(tzinfo=timezone.utc)
 
 PROCEDURE_TYPES = [
     "aboveThreshold",
@@ -191,7 +195,9 @@ def run(config: Configuration, store: DatasetStore, arguments: dict[str, Any]) -
             continue
         matched.append(tender)
 
-    matched.sort(key=lambda t: (t.published_at is None, t.published_at, t.uuid), reverse=True)
+    # Newest publication first, with undated records last rather than first:
+    # reversing a (is_none, date) tuple would float them to the top.
+    matched.sort(key=lambda t: (t.published_at is not None, t.published_at or MIN_MOMENT, t.uuid), reverse=True)
     sample = matched[:limit]
 
     return {
@@ -200,7 +206,13 @@ def run(config: Configuration, store: DatasetStore, arguments: dict[str, Any]) -
         "total_matched": len(matched),
         # A capped result says so; a silent truncation reads as "this is all of it".
         "truncated": len(matched) > len(sample),
-        "filters_applied": {k: v for k, v in parsed.items() if v not in (None, [], "")},
+        # The exclusion list can hold hundreds of ids; echoing it back would put
+        # kilobytes of pure repetition into the caller's context on every call.
+        "filters_applied": {
+            k: (f"{len(v)} tender ids" if k == "exclude_tender_ids" else v)
+            for k, v in parsed.items()
+            if v not in (None, [], "")
+        },
         "tenders": [_summary(t) for t in sample],
         "data_window": store.data_window().to_payload(),
         "provenance": config.provenance(),

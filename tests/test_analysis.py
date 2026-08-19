@@ -148,3 +148,94 @@ def test_streak_records_the_cpv_groups_it_spans():
     streak = longest_streak(award_sequence(tenders), "111")
 
     assert streak["cpv_groups"] == ["3360", "4212"], "a streak across unrelated categories is the point"
+
+
+def joint_tender(uuid, suppliers, amount, offset_days):
+    from datetime import timedelta
+
+    from factories import tender_doc
+
+    published = BASE + timedelta(days=offset_days)
+    return normalize_tender(
+        tender_doc(
+            uuid=uuid,
+            tender_id=f"UA-{uuid}",
+            published=published,
+            amount=amount,
+            awards=[
+                {
+                    "id": f"a-{uuid}",
+                    "status": "active",
+                    "date": (published + timedelta(days=5)).isoformat(),
+                    "value": {"amount": amount, "currency": "UAH"},
+                    "suppliers": [
+                        {"identifier": {"id": s, "legalName": f"Supplier {s}"}} for s in suppliers
+                    ],
+                }
+            ],
+        )
+    )
+
+
+def test_a_joint_award_does_not_break_a_streak():
+    """A consortium winning repeatedly is the pattern the rule exists to catch."""
+    tenders = [joint_tender(f"j{i}", ["111", "222"], 100.0, i * 5) for i in range(4)]
+    events = award_sequence(tenders)
+
+    assert longest_streak(events, "111")["length"] == 4
+    assert best_streak(events)["length"] == 4
+
+
+def test_a_streak_still_breaks_when_the_supplier_drops_out():
+    tenders = [
+        joint_tender("j1", ["111", "222"], 100.0, 0),
+        joint_tender("j2", ["111"], 100.0, 5),
+        joint_tender("j3", ["333"], 100.0, 10),
+        joint_tender("j4", ["111"], 100.0, 15),
+    ]
+    events = award_sequence(tenders)
+
+    assert longest_streak(events, "111")["length"] == 1, "the run ended at the tender won by 333"
+    assert best_streak(events)["length"] == 2
+
+
+def test_trend_direction_sees_a_spike_in_the_middle():
+    """First-versus-last would call this stable and hide two months of capture."""
+    tenders = [
+        tender("t1", "111", 100.0, 0),
+        tender("t2", "222", 100.0, 1),
+        tender("t3", "333", 100.0, 2),
+        tender("t4", "111", 500.0, 32),
+        tender("t5", "111", 500.0, 62),
+        tender("t6", "111", 100.0, 92),
+        tender("t7", "222", 100.0, 93),
+        tender("t8", "333", 100.0, 94),
+    ]
+    trend = monthly_trend(award_sequence(tenders))
+
+    assert trend["periods_analyzed"] == 4
+    assert trend["magnitude"] == 0.0, "the endpoints really are identical"
+    assert trend["slope_per_month"] is not None
+
+
+def test_trend_reports_months_with_no_awards_rather_than_hiding_them():
+    tenders = [tender("t1", "111", 100.0, 0), tender("t2", "222", 100.0, 120)]
+    trend = monthly_trend(award_sequence(tenders))
+
+    # June and September, so four calendar months with July and August empty.
+    assert trend["periods_analyzed"] == 2
+    assert trend["months_spanned"] == 4
+    assert trend["months_without_awards"] == ["2026-07", "2026-08"]
+
+
+def test_undated_awards_do_not_crash_the_sort():
+    """datetime.min.astimezone() raised OverflowError on some platforms."""
+    from factories import tender_doc
+
+    undated = normalize_tender(
+        tender_doc(uuid="undated1", tender_id="UA-undated", published=None,
+                   awards=[award(edrpou="111", amount=10.0)])
+    )
+    events = award_sequence([undated, tender("t1", "222", 100.0, 0)])
+
+    assert len(events) == 2
