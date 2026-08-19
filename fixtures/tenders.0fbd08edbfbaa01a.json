@@ -1,0 +1,26 @@
+{
+ "data": [
+  {
+   "dateModified": "2026-08-19T14:06:42.222265+03:00",
+   "tenderID": "UA-2026-08-19-006044-a",
+   "status": "active",
+   "id": "b022cec3c4464496a50de586bb383d47"
+  },
+  {
+   "dateModified": "2026-08-19T14:06:41.123015+03:00",
+   "tenderID": "UA-2026-08-19-007504-a",
+   "status": "active",
+   "id": "f0fef7c757224d7a8c78d8112b9ab53a"
+  }
+ ],
+ "next_page": {
+  "offset": "1787137601.152.1.fecdec00b763b911b76cad82c9eb340c",
+  "path": "/api/2.5/tenders?limit=2&descending=1&opt_fields=status%2CtenderID&offset=1787137601.152.1.fecdec00b763b911b76cad82c9eb340c",
+  "uri": "https://public.api.openprocurement.org/api/2.5/tenders?limit=2&descending=1&opt_fields=status%2CtenderID&offset=1787137601.152.1.fecdec00b763b911b76cad82c9eb340c"
+ },
+ "prev_page": {
+  "offset": "1787137602.228.1.9cfecdadd43ffcb55d62be4bceb64b53",
+  "path": "/api/2.5/tenders?limit=2&opt_fields=status%2CtenderID&offset=1787137602.228.1.9cfecdadd43ffcb55d62be4bceb64b53",
+  "uri": "https://public.api.openprocurement.org/api/2.5/tenders?limit=2&opt_fields=status%2CtenderID&offset=1787137602.228.1.9cfecdadd43ffcb55d62be4bceb64b53"
+ }
+}

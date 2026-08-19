@@ -1,0 +1,105 @@
+# Statutory thresholds and minimum periods, versioned by effective date.
+#
+# Rules look these up by the tender's noticePublicationDate, never by "today":
+# applying a current rule to a tender published under an earlier regime would
+# manufacture violations that never happened.
+#
+# Every entry carries its source. All entries are marked `verification: primary`:
+# each was read from the official text at zakon.rada.gov.ua, including the
+# superseded editions for the historical figures. Nothing here is written from
+# memory, and nothing rests on a secondary source.
+
+version: 2026-08-19b
+classifier: "ДК 021:2015 (CPV)"
+
+regimes:
+  - id: osoblyvosti-1178
+    name: Особливості здійснення публічних закупівель (КМУ № 1178 від 12.10.2022)
+    effective_from: 2022-10-19
+    effective_to: null   # ASSUMPTION: martial-law regime still in force; verify before the defence
+    source: https://zakon.rada.gov.ua/laws/show/1178-2022-%D0%BF
+
+    # Values at or above which the buyer must run відкриті торги з особливостями.
+    # Below them the purchase may be made without the electronic system, which
+    # is what a `reporting` record usually is.
+    mandatory_open_tender_from:
+      - subject: goods_and_services
+        amount_uah: 100000
+        excludes: послуги з поточного ремонту
+        source_point: "пункт 10"
+        verification: primary
+      - subject: current_repair_services
+        amount_uah: 200000
+        source_point: "пункт 10"
+        verification: primary
+      - subject: works
+        amount_uah: 1500000
+        source_point: "пункт 10"
+        verification: primary
+
+    # Below this value even a report to the system is not mandatory.
+    reporting_optional_below:
+      amount_uah: 50000
+      source_point: "пункт 11"
+      verification: primary
+
+    # Procedures the minimum bid period below actually governs. The figures come
+    # from the rules for відкриті торги з особливостями and do NOT govern
+    # priceQuotation (electronic-catalogue price quotations), which runs under a
+    # separate order with its own, shorter timetable. Applying the open-tender
+    # minimum to a price quotation flagged every single one in the demonstration
+    # dataset as a statutory breach, which is exactly the false accusation this
+    # configuration exists to prevent. No entry is written for priceQuotation
+    # because no primary source for its minimum has been read yet; the rule
+    # reports itself as not applicable instead of guessing.
+    minimum_tender_period_procedures:
+      - aboveThreshold
+      - aboveThresholdUA
+      - aboveThresholdEU
+      - aboveThresholdUA.defense
+
+    # Minimum bid submission period, counted from the day the notice is
+    # published ("з дня оприлюднення ... оголошення про проведення відкритих
+    # торгів"), per пункт 34. Read from the official text at zakon.rada.gov.ua,
+    # including the superseded editions, so both periods below are primary.
+    #
+    # Before 09.04.2024 пункт 34 set a single figure for every subject:
+    #   "Строк для подання тендерних пропозицій не може бути менше, ніж сім днів
+    #    з дня оприлюднення оголошення про проведення відкритих торгів в
+    #    електронній системі закупівель."
+    # Постанова КМУ № 382 від 02.04.2024 (набрання чинності 09.04.2024) split it
+    # into seven days for товари/послуги and 14 days for роботи.
+    #
+    # The Особливості set no longer minimum above the EU thresholds; that rule
+    # belongs to Закон 922-VIII, which these Особливості displace under martial
+    # law. No such entry is configured, because none applies.
+    minimum_tender_period_days:
+      - subject: goods_and_services
+        days: 7
+        source_point: "пункт 34"
+        verification: primary
+        source: https://zakon.rada.gov.ua/laws/show/1178-2022-%D0%BF
+      - subject: works
+        days: 14
+        effective_from: 2024-04-09
+        source_point: "пункт 34, у редакції Постанови КМУ № 382 від 02.04.2024"
+        verification: primary
+        source: https://zakon.rada.gov.ua/laws/show/1178-2022-%D0%BF
+      - subject: works
+        days: 7
+        effective_from: 2022-10-19
+        effective_to: 2024-04-08
+        source_point: "пункт 34, первісна редакція"
+        verification: primary
+        source: https://zakon.rada.gov.ua/laws/show/1178-2022-%D0%BF/ed20221019
+
+    # Tolerance applied before the bid-window rule fires, in days. Publication
+    # and period start can differ by hours for legitimate reasons, and the rule
+    # must accuse only when the gap is unambiguous.
+    tender_period_tolerance_days: 0.5
+
+# Mapping from the tender's mainProcurementCategory to the subject used above.
+category_map:
+  goods: goods_and_services
+  services: goods_and_services
+  works: works

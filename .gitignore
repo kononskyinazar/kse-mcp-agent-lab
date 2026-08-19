@@ -31,6 +31,20 @@ logs/
 runs/
 .tmp/
 
+# --- stray host artifacts (macOS aliases, installers, disk images) ---
+# Root-anchored: an installer dropped in the project directory, not anything
+# inside demo-vault/, whose notes are part of the submission.
+*.dmg
+*.pkg
+*.app
+/Obsidian*
+
+# Obsidian's per-vault config. The Local REST API plugin keeps its API key and a
+# self-signed certificate in plugins/obsidian-local-rest-api/data.json, so this
+# directory must never be committed. Graders install the plugin themselves; the
+# README says how. Last rule wins in gitignore, so this stays at the end.
+demo-vault/.obsidian/
+
 # --- os / editor ---
 .DS_Store
 .idea/

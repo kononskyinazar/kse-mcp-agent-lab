@@ -1,0 +1,31 @@
+{
+  "swept_at": "2026-08-19T10:59:55+00:00",
+  "api_host": "https://public.api.openprocurement.org/api/2.5",
+  "window": {
+    "days": 30,
+    "basis": "dateModified",
+    "from": "2026-07-20T10:44:06+00:00",
+    "to": "2026-08-19T10:59:53+00:00"
+  },
+  "offsets": {
+    "first": "1784544246",
+    "last": "1787136645.806.1.f881c383557567e7a00c21e007b96f5e"
+  },
+  "feed_requests": 303,
+  "document_requests": 533,
+  "elapsed_seconds": 947.5,
+  "rows_seen": 299009,
+  "rows_matched": 645,
+  "documents_written": 533,
+  "per_buyer": {
+    "31557119": 262,
+    "02070944": 143,
+    "03327121": 126,
+    "01999218": 114
+  },
+  "failures": [],
+  "stopped_because": "feed_exhausted",
+  "compressed": true,
+  "documents_truncated_to": 150,
+  "matching_tenders_available": 645
+}
