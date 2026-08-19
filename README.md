@@ -217,10 +217,10 @@ Stated plainly, because a screening tool that oversells itself is worse than non
   not downloaded or parsed.
 - History is bounded by the sweep window, so streaks and trends are short-horizon. Every
   response states the window it used.
-- The statutory table covers the periods the dataset spans. Value thresholds were read from
-  the official text and are marked `primary`; the minimum bid periods come from procurement
-  practice publications and are marked `secondary` pending confirmation against the
-  official text.
+- The statutory table covers the periods the dataset spans. Every figure was read from the
+  official text at zakon.rada.gov.ua, including the superseded editions for the historical
+  ones, and is marked `primary` with its пункт. A test fails if any threshold reverts to a
+  secondary source.
 - No minimum bid period is configured for `priceQuotation`, which runs under a separate
   order. The rule reports itself as not applicable rather than guessing — an earlier draft
   that guessed flagged all 68 price quotations in the dataset as statutory breaches.

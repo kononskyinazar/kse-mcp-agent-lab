@@ -197,10 +197,13 @@ a different score. Nothing recompiled.
   dataset. The API does not publish registration dates, the field name says so, and over
   this 30-day sweep the signal fires for about 58% of awarded tenders — which is why its
   weight is 6.
-- *"Where do the thresholds come from?"* Value thresholds from the official text of CMU
-  1178, marked `primary` in the config with the point number. Minimum bid periods from
-  procurement-practice publications, marked `secondary`, and still to be confirmed against
-  the official text.
+- *"Where do the thresholds come from?"* All from the official text of КМУ № 1178 at
+  zakon.rada.gov.ua, each carrying its пункт in the config. Values: пункт 10 — 100 тис.
+  грн for товари/послуги, 200 тис. for поточний ремонт, 1,5 млн for роботи. Bid periods:
+  пункт 34 — seven days, and 14 for роботи since Постанова КМУ № 382 від 02.04.2024, which
+  took effect **09.04.2024**. The pre-amendment wording set seven days for everything, and
+  it is configured separately with the superseded edition as its source, so a tender from
+  2023 is never judged by today's number.
 - *"Did anything surprise you?"* Yes — the first version flagged all 68 price quotations as
   statutory breaches, because the open-tender minimum does not govern that procedure. It
   now reports itself as not applicable instead of guessing.

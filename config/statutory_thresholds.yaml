@@ -4,13 +4,12 @@
 # applying a current rule to a tender published under an earlier regime would
 # manufacture violations that never happened.
 #
-# Every entry carries its source. Entries marked `verification: primary` were
-# read from the official text at zakon.rada.gov.ua; entries marked `secondary`
-# were taken from procurement-practice publications because the official page
-# could not be retrieved in full, and MUST be confirmed against the official
-# text before the defence. Nothing here is written from memory.
+# Every entry carries its source. All entries are marked `verification: primary`:
+# each was read from the official text at zakon.rada.gov.ua, including the
+# superseded editions for the historical figures. Nothing here is written from
+# memory, and nothing rests on a secondary source.
 
-version: 2026-08-19
+version: 2026-08-19b
 classifier: "ДК 021:2015 (CPV)"
 
 regimes:
@@ -59,23 +58,40 @@ regimes:
       - aboveThresholdEU
       - aboveThresholdUA.defense
 
-    # Minimum bid submission period, counted from publication of the notice.
+    # Minimum bid submission period, counted from the day the notice is
+    # published ("з дня оприлюднення ... оголошення про проведення відкритих
+    # торгів"), per пункт 34. Read from the official text at zakon.rada.gov.ua,
+    # including the superseded editions, so both periods below are primary.
+    #
+    # Before 09.04.2024 пункт 34 set a single figure for every subject:
+    #   "Строк для подання тендерних пропозицій не може бути менше, ніж сім днів
+    #    з дня оприлюднення оголошення про проведення відкритих торгів в
+    #    електронній системі закупівель."
+    # Постанова КМУ № 382 від 02.04.2024 (набрання чинності 09.04.2024) split it
+    # into seven days for товари/послуги and 14 days for роботи.
+    #
+    # The Особливості set no longer minimum above the EU thresholds; that rule
+    # belongs to Закон 922-VIII, which these Особливості displace under martial
+    # law. No such entry is configured, because none applies.
     minimum_tender_period_days:
       - subject: goods_and_services
         days: 7
-        verification: secondary
-        source: https://infobox.prozorro.org/articles/zmini-do-postanovi-1178-vid-9-kvitnya-2024
+        source_point: "пункт 34"
+        verification: primary
+        source: https://zakon.rada.gov.ua/laws/show/1178-2022-%D0%BF
       - subject: works
         days: 14
-        effective_from: 2024-04-19   # introduced by the April 2024 amendments
-        verification: secondary
-        source: https://dozorro.org/blog/12-kvitnevih-zmin-do-zakupivelnih-pravil
+        effective_from: 2024-04-09
+        source_point: "пункт 34, у редакції Постанови КМУ № 382 від 02.04.2024"
+        verification: primary
+        source: https://zakon.rada.gov.ua/laws/show/1178-2022-%D0%BF
       - subject: works
         days: 7
         effective_from: 2022-10-19
-        effective_to: 2024-04-18
-        verification: secondary
-        source: https://dozorro.org/blog/12-kvitnevih-zmin-do-zakupivelnih-pravil
+        effective_to: 2024-04-08
+        source_point: "пункт 34, первісна редакція"
+        verification: primary
+        source: https://zakon.rada.gov.ua/laws/show/1178-2022-%D0%BF/ed20221019
 
     # Tolerance applied before the bid-window rule fires, in days. Publication
     # and period start can differ by hours for legitimate reasons, and the rule
