@@ -25,6 +25,30 @@ DESCRIPTION = (
     "compute_buyer_supplier_concentration."
 )
 
+PURPOSE = (
+    "Decide whether one tender deserves human attention, and show the working. "
+    "The model calls it once per tender after find_tenders has narrowed the set. "
+    "It is the only tool that produces a risk score, and the only one that "
+    "distinguishes a citable breach from a merely suspicious pattern."
+)
+
+SIDE_EFFECTS = (
+    "None on the dataset. Reads the prepared documents and, when the requested "
+    "tender is absent and the identifier is a document UUID, one upstream "
+    "document through the configured client - the live API, or a recorded "
+    "fixture in offline mode. Nothing is written."
+)
+
+ERROR_CONDITIONS = [
+    ("INVALID_INPUT", "tender_identifier missing, too short, or an unknown argument supplied"),
+    ("NOT_FOUND", "no such tender in the dataset, and a tenderID cannot be resolved upstream"),
+    ("FIXTURE_MISSING", "offline mode, and no recording exists for that document"),
+    ("UPSTREAM_UNAVAILABLE", "live mode, and the API failed after the configured retries"),
+    ("DATA_INTEGRITY", "the document has no id or no procurementMethodType, so no rule set applies"),
+]
+
+EXAMPLE_ARGUMENTS = {"tender_identifier": "UA-2026-07-06-008728-a", "include_evidence": True}
+
 INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {

@@ -38,6 +38,21 @@ PROCEDURE_TYPES = [
     "simple.defense",
 ]
 
+PURPOSE = (
+    "Narrow hundreds of tenders down to the handful worth screening, under "
+    "filters the caller cannot exceed. The single retrieval tool in the set; "
+    "everything else in this server computes or judges."
+)
+
+SIDE_EFFECTS = "None. Reads the prepared dataset only."
+
+ERROR_CONDITIONS = [
+    ("INVALID_INPUT", "malformed EDRPOU, non-ISO date, reversed range, non-numeric CPV prefix, unknown procedure type, or an unknown argument"),
+    ("DATA_INTEGRITY", "the prepared dataset is missing or empty"),
+]
+
+EXAMPLE_ARGUMENTS = {"buyer_edrpou": "01999218", "cpv_prefix": "336", "limit": 2}
+
 INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {

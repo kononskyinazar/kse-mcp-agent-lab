@@ -8,9 +8,11 @@
   ],
   "mcpServers": {
     "obsidian": {
-      "description": "Approved existing server: bridge to the Obsidian Local REST API plugin. Reads the buyer watchlist and prior findings, writes the findings note back.",
+      "description": "Approved existing server: bridge to the Obsidian Local REST API plugin. Reads the buyer watchlist and prior findings, writes the findings note back. Started via uvx with mcp pinned below 2.0: the published bridge is written against the 1.x SDK and crashes on import with 2.x.",
       "command": "${OBSIDIAN_MCP_COMMAND:-uvx}",
       "args": [
+        "--with",
+        "mcp<2",
         "mcp-obsidian"
       ],
       "env": {

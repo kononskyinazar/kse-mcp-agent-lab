@@ -50,15 +50,18 @@ class ObsidianVault:
         self.connection = connection
         self.get_file = connection.find_tool("get", "file", "contents") or connection.find_tool("get", "file")
         self.list_files = connection.find_tool("list", "files", "dir") or connection.find_tool("list", "files")
+        # The bridge exposes no whole-file write: content is either appended to
+        # a file (creating it when absent) or patched relative to a heading,
+        # block or frontmatter field. Both paths are used, for different jobs.
         self.append = connection.find_tool("append", "content")
-        self.put = connection.find_tool("put", "content") or connection.find_tool("patch", "content")
+        self.patch = connection.find_tool("patch", "content")
 
     def capability_report(self) -> dict[str, str | None]:
         return {
             "get_file": self.get_file,
             "list_files": self.list_files,
             "append": self.append,
-            "put": self.put,
+            "patch": self.patch,
             "discovered_tools": ", ".join(self.connection.tool_names()),
         }
 
@@ -104,8 +107,45 @@ class ObsidianVault:
     async def append_note(self, path: str, content: str) -> None:
         await self.connection.call(self.require("append"), {"filepath": path, "content": content})
 
-    async def write_note(self, path: str, content: str) -> None:
-        await self.connection.call(self.require("put"), {"filepath": path, "content": content})
+    async def note_exists(self, path: str, marker: str | None = None) -> bool:
+        """Whether the note is already there, optionally carrying a marker."""
+        try:
+            existing = await self.read_note(path)
+        except MCPToolFailure as failure:
+            if failure.code in {"NOT_FOUND", "404"}:
+                return False
+            raise
+        if not existing.strip():
+            return False
+        return marker in existing if marker else True
+
+    async def create_note(self, path: str, content: str, *, marker: str | None = None) -> str:
+        """Create a note, or leave it alone if the same finding is already there.
+
+        Appending is the only creation path the bridge offers, so writing twice
+        would duplicate the note. The marker - the finding id, derived from the
+        run inputs - makes a re-run after a mid-write failure a no-op instead.
+        """
+        if await self.note_exists(path, marker):
+            return "already_present"
+        await self.append_note(path, content)
+        return "created"
+
+    async def patch_frontmatter(self, path: str, field: str, value: Any) -> None:
+        """Replace one frontmatter field. Used for the run-to-run state."""
+        import json as _json
+
+        payload = value if isinstance(value, str) else _json.dumps(value, ensure_ascii=False)
+        await self.connection.call(
+            self.require("patch"),
+            {
+                "filepath": path,
+                "operation": "replace",
+                "target_type": "frontmatter",
+                "target": field,
+                "content": payload,
+            },
+        )
 
     async def read_watchlist(self, path: str = WATCHLIST_PATH) -> Watchlist:
         raw = await self.read_note(path)

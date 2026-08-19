@@ -90,6 +90,7 @@ class StubModel:
 
 def obsidian_stub(screening_note=WATCHLIST, findings=(), writes=None):
     writes = writes if writes is not None else []
+    patches: list[tuple] = []
 
     def handler(tool, arguments):
         if "get_file" in tool:
@@ -102,18 +103,22 @@ def obsidian_stub(screening_note=WATCHLIST, findings=(), writes=None):
             raise MCPToolFailure("obsidian", tool, {"error": {"code": "NOT_FOUND", "message": path}})
         if "list_files" in tool:
             return {"files": [name for name, _ in findings]}
-        if "put_content" in tool or "append_content" in tool:
+        if "append_content" in tool:
             writes.append((arguments.get("filepath"), arguments.get("content")))
+            return {"status": "ok"}
+        if "patch_content" in tool:
+            patches.append((arguments.get("filepath"), arguments.get("target"), arguments.get("content")))
             return {"status": "ok"}
         raise AssertionError(f"unexpected obsidian tool {tool}")
 
     connection = StubConnection(
         "obsidian",
-        ["obsidian_get_file_contents", "obsidian_list_files_in_dir", "obsidian_put_content",
+        ["obsidian_get_file_contents", "obsidian_list_files_in_dir", "obsidian_patch_content",
          "obsidian_append_content"],
         handler,
     )
     connection.writes = writes
+    connection.patches = patches
     return connection
 
 
@@ -258,14 +263,34 @@ async def test_rejection_at_the_gate_writes_nothing():
     assert obsidian.writes == []
 
 
-async def test_approval_writes_the_note_then_the_watchlist():
+async def test_approval_writes_the_note_then_patches_the_watchlist_state():
     obsidian = obsidian_stub()
     deps = make_deps(obsidian, procurement_stub(risk_score=90.0))
     await run_graph(deps, resume={"approved": True}, thread="approve")
 
-    paths = [path for path, _ in obsidian.writes]
-    assert paths[0].startswith("procurement/findings/findings_01999218_")
-    assert paths[-1] == "procurement/watchlist.md", "state update lands last, after the note"
+    assert obsidian.writes[0][0].startswith("procurement/findings/findings_01999218_")
+    # State update comes last, and touches only frontmatter fields: the bridge
+    # offers no whole-file write, so the analyst's prose is never overwritten.
+    assert [target for _, target, _ in obsidian.patches] == [
+        "last_reviewed_date", "last_run_id", "reviewed_tender_ids"
+    ]
+
+
+async def test_rerunning_does_not_duplicate_an_existing_note():
+    """Appending is the only creation path, so an existing finding is left alone."""
+    obsidian = obsidian_stub()
+    deps = make_deps(obsidian, procurement_stub(risk_score=90.0))
+    state_one = await run_graph(deps, resume={"approved": True}, thread="dup-1")
+
+    path, content = obsidian.writes[0]
+    obsidian_two = obsidian_stub(findings=[(path.rsplit("/", 1)[1], content)])
+    deps_two = make_deps(obsidian_two, procurement_stub(risk_score=90.0))
+    deps_two.today = deps.today
+    state_two = await run_graph(deps_two, resume={"approved": True}, thread="dup-2")
+
+    assert state_one["written"], "the first run writes the note"
+    assert obsidian_two.writes == [], "the second run must not append a duplicate"
+    assert state_two["skipped_existing"]
 
 
 async def test_written_note_carries_the_required_frontmatter():
@@ -298,9 +323,9 @@ async def test_updated_watchlist_records_what_was_screened():
     deps = make_deps(obsidian, procurement_stub(risk_score=90.0))
     await run_graph(deps, resume={"approved": True}, thread="state")
 
-    _, content = obsidian.writes[-1]
-    assert "UA-new-1" in content
-    assert "last_reviewed_date: '2026-08-19'" in content or "last_reviewed_date: 2026-08-19" in content
+    patched = {target: content for _, target, content in obsidian.patches}
+    assert "UA-new-1" in patched["reviewed_tender_ids"]
+    assert patched["last_reviewed_date"] == "2026-08-19"
 
 
 async def test_obsidian_read_failure_aborts_before_any_write():

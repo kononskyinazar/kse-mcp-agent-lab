@@ -22,6 +22,21 @@ DESCRIPTION = (
     "error."
 )
 
+PURPOSE = (
+    "Give the analyst the buyer-level context that a single tender cannot show: "
+    "whether this buyer's money keeps landing with the same suppliers. Called "
+    "once per buyer, before its tenders are read."
+)
+
+SIDE_EFFECTS = "None. Reads the prepared dataset only."
+
+ERROR_CONDITIONS = [
+    ("INVALID_INPUT", "buyer_edrpou is not 8 or 10 digits, dates are not ISO, or the period is reversed"),
+    ("DATA_INTEGRITY", "the prepared dataset is missing or empty"),
+]
+
+EXAMPLE_ARGUMENTS = {"buyer_edrpou": "31557119", "include_trend": True}
+
 INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {

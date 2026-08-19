@@ -24,6 +24,23 @@ DESCRIPTION = (
     "threshold breach is itself one of the strongest signals."
 )
 
+PURPOSE = (
+    "Answer one legal question about a tender: was the procedure it used allowed "
+    "at the value it carried, under the rules in force when it was published. "
+    "Separated from screening because it is the only check whose answer is a "
+    "citable yes or no rather than a judgement."
+)
+
+SIDE_EFFECTS = "None. Reads the prepared dataset and the versioned threshold configuration."
+
+ERROR_CONDITIONS = [
+    ("INVALID_INPUT", "tender_identifier missing or an unknown argument supplied"),
+    ("NOT_FOUND", "no such tender in the dataset"),
+    ("DATA_INTEGRITY", "items are not classified with CPV-DK 021:2015, or the tender has no publication date"),
+]
+
+EXAMPLE_ARGUMENTS = {"tender_identifier": "UA-2026-08-18-004904-a"}
+
 INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {

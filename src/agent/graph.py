@@ -47,6 +47,7 @@ class RunState(TypedDict, total=False):
     review_decision: dict[str, Any]
     notes: list[dict[str, Any]]
     written: list[str]
+    skipped_existing: list[str]
     errors: Annotated[list[dict[str, Any]], _merge]
     discovery: dict[str, list[str]]
 
@@ -292,20 +293,25 @@ def build_graph(deps: AgentDeps):
         written: list[str] = []
         errors: list[dict[str, Any]] = []
 
+        skipped: list[str] = []
         for note in state.get("notes") or []:
             content = _render_frontmatter(note["frontmatter"]) + "\n" + note["body"] + "\n"
             try:
-                await vault.write_note(note["path"], content)
-                written.append(note["path"])
+                outcome = await vault.create_note(
+                    note["path"], content, marker=note["frontmatter"]["finding_id"]
+                )
+                (written if outcome == "created" else skipped).append(note["path"])
             except (MCPToolFailure, MCPConnectionError) as exc:
                 errors.append(_error(f"write[{note['path']}]", exc))
 
+        # State update goes last: if it fails, the notes still exist and their
+        # tenders are simply re-screened next run rather than lost.
         try:
             await _update_watchlist(deps, state)
         except (MCPToolFailure, MCPConnectionError) as exc:
             errors.append(_error("update_watchlist", exc))
 
-        return {"written": written, "errors": errors}
+        return {"written": written, "skipped_existing": skipped, "errors": errors}
 
     def route_after_screening(state: RunState) -> str:
         if not state.get("flagged"):
@@ -354,10 +360,8 @@ async def _update_watchlist(deps: AgentDeps, state: RunState) -> None:
     reviewed = set(watchlist.reviewed_tender_ids)
     reviewed.update(r["identifier"] for r in state.get("screened") or [] if r.get("identifier"))
 
-    frontmatter = dict(watchlist.frontmatter)
-    frontmatter["last_reviewed_date"] = deps.today.isoformat()
-    frontmatter["last_run_id"] = state.get("run_id")
-    frontmatter["reviewed_tender_ids"] = sorted(reviewed)
-
-    _, prose = parse_frontmatter(watchlist.raw)
-    await vault.write_note(path, _render_frontmatter(frontmatter) + prose.lstrip("\n"))
+    # The bridge patches frontmatter field by field; there is no whole-file
+    # write, so the analyst's prose is never touched by the agent.
+    await vault.patch_frontmatter(path, "last_reviewed_date", deps.today.isoformat())
+    await vault.patch_frontmatter(path, "last_run_id", str(state.get("run_id")))
+    await vault.patch_frontmatter(path, "reviewed_tender_ids", sorted(reviewed))
