@@ -5,11 +5,12 @@ Every custom tool is documented with all eight elements required by the assignme
 model-facing description recorded here must be byte-identical to the one the server
 actually exposes over MCP; a mismatch is treated as a defect.
 
-Status: schemas pending domain selection. Structure below is the template each tool fills.
+Domain: public procurement red-flag screening over the Prozorro open API.
+Status: tool names fixed; schemas are filled in as each tool is implemented.
 
 ---
 
-## Custom server - Tool 1: `<name>`
+## Custom server - Tool 1: `screen_tender_red_flags`
 
 | Contract element | Content |
 |---|---|
@@ -22,13 +23,17 @@ Status: schemas pending domain selection. Structure below is the template each t
 | Side effects | Files written, state mutated, network calls; "none" where applicable |
 | Example | One representative request/response pair, copied from a real run |
 
-## Custom server - Tool 2: `<name>`
+## Custom server - Tool 2: `compute_buyer_supplier_concentration`
 
 (same eight rows)
 
-## Custom server - Tool 3: `<name>`
+## Custom server - Tool 3: `check_procedure_threshold_compliance`
 
 (same eight rows)
+
+## Custom server - Tool 4: `find_tenders`
+
+(same eight rows; the single retrieval tool)
 
 ---
 
@@ -47,13 +52,17 @@ with an empty collection and an explicit `result_count: 0`.
 | `FIXTURE_MISSING` | Offline/replay mode requested a recording that does not exist | No | Demo data gap |
 | `DATA_INTEGRITY` | Source data present but violates an invariant the tool relies on | No | Corrupt or unexpected upstream payload |
 
+`INVALID_INPUT` and a successful `result_count: 0` are the pair the assignment cares about
+most: a bad EDRPOU is an error, a valid EDRPOU with no matching tenders is a success with
+an empty collection. No response can be read both ways.
+
 ---
 
 ## Existing server (Part A) - documented tool
 
 | Contract element | Content |
 |---|---|
-| Server | `<Obsidian Local REST API MCP / Microsoft Playwright MCP / OpenWeather MCP>` |
+| Server | Obsidian Local REST API MCP |
 | Pinned version / commit | Instructor-announced version |
 | Tool name | |
 | Model-facing description | Exact string as discovered from the running server, not from the README |

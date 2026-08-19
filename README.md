@@ -5,14 +5,20 @@ Coursework submission for **MCP Integration: Student Assignment** (see
 
 An agent that solves a coherent multi-step domain problem using two MCP connections:
 
-1. **an approved existing MCP server** - selection pending, one of Obsidian Local REST API
-   MCP, Microsoft Playwright MCP, or OpenWeather MCP;
-2. **a custom MCP server**, implemented in this repository, running as a separate process
-   and exposing at least three substantive domain tools.
+1. **the Obsidian Local REST API MCP server** - reads the analyst's buyer watchlist and
+   prior findings from a demonstration vault, and writes updated findings back;
+2. **a custom procurement MCP server**, implemented in this repository, running as a
+   separate process and exposing four tools over Ukrainian public procurement data from
+   the Prozorro open API: red-flag screening, buyer-supplier concentration, procedure
+   threshold compliance, and constrained tender retrieval.
 
-> **Status: scaffolding only.** The domain, the agent framework and the tool set are not
-> yet fixed. Sections marked *pending* are placeholders; no implementation exists yet.
-> See [`docs/domain-candidates.md`](docs/domain-candidates.md) for the shortlist.
+Orchestration is a LangGraph graph, so the points where a tool result changes the next
+step are edges in the graph rather than hints in a prompt.
+
+> **Status: design complete, implementation not started.** The domain, framework, existing
+> server and tool set are fixed; see
+> [`docs/superpowers/specs/2026-08-19-procurement-screening-design.md`](docs/superpowers/specs/2026-08-19-procurement-screening-design.md).
+> Sections marked *pending* below are filled in as the code lands.
 
 ## Repository layout
 
@@ -23,6 +29,7 @@ An agent that solves a coherent multi-step domain problem using two MCP connecti
 | `config/` | MCP connection configuration; `*.local.json` is git-ignored |
 | `data/` | Prepared local dataset used as deterministic demo input |
 | `fixtures/` | Recorded genuine API responses for offline replay |
+| `demo-vault/` | Committed Obsidian demonstration vault: watchlist and findings notes |
 | `tests/` | Tests (encouraged, not required by the assignment) |
 | `scripts/` | Helper scripts: fixture recording, dataset preparation |
 | `docs/` | Assignment copy, tool contracts, design rationale, defence checklist |
@@ -31,6 +38,8 @@ An agent that solves a coherent multi-step domain problem using two MCP connecti
 
 | Document | Purpose |
 |---|---|
+| [`docs/superpowers/specs/2026-08-19-procurement-screening-design.md`](docs/superpowers/specs/2026-08-19-procurement-screening-design.md) | The design: architecture, data strategy, tools, flow, failure handling |
+| [`docs/upgrade-review.md`](docs/upgrade-review.md) | Feasibility evidence from the live API and per-item verdicts on the proposed upgrades |
 | [`docs/plan-review.md`](docs/plan-review.md) | Critical review of the supplied draft plan and what was kept from it |
 | [`docs/domain-candidates.md`](docs/domain-candidates.md) | Shortlisted domains with rubric analysis and a recommendation |
 | [`docs/tool-contracts.md`](docs/tool-contracts.md) | Part C - full contract per custom tool, plus the existing server's tool |

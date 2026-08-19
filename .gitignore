@@ -31,6 +31,13 @@ logs/
 runs/
 .tmp/
 
+# --- stray host artifacts (macOS aliases, installers, disk images) ---
+*.dmg
+*.pkg
+*.app
+Obsidian*
+!demo-vault/
+
 # --- os / editor ---
 .DS_Store
 .idea/

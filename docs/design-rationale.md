@@ -6,8 +6,11 @@ criterion 2.
 
 ## 1. Domain and problem statement
 
-*Pending decision.* Must name: the user, the decision being supported, and why a single
-lookup does not solve it.
+Public procurement red-flag screening. The user is an analyst watching a small set of
+buyers; the decision supported is which tenders deserve human review and on what evidence.
+A single lookup cannot answer it: the verdict depends on the buyer's award history, on the
+statutory rules in force at publication, and on what previous runs already concluded.
+Full design: [`superpowers/specs/2026-08-19-procurement-screening-design.md`](superpowers/specs/2026-08-19-procurement-screening-design.md).
 
 ## 2. Why the selected existing MCP server is relevant
 
