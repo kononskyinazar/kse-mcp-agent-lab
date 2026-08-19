@@ -1,0 +1,79 @@
+<PROMPT_UPGRADE_RATIONALE>
+A critical review of the original prompt reveals several areas for improvement to maximize clarity, enforce structure, and elicit the highest-quality analytical output from a frontier model like Claude Opus 5 Ultracode.
+
+1.  **Role & Persona:** "Senior Data Analyst" is good but can be enhanced by adding "with expertise in data warehousing and ETL (Extract, Transform, Load) processes." This signals the need for a technical, actionable output, not just conceptual analysis.
+2.  **Contextual Rigor:** The original placeholders `[project name/description]` were too vague. The upgrade mandates a detailed "PROJECT CONTEXT" section that explicitly states the *Goal*, *Data Usage*, and *Success Criteria*. This provides the necessary grounding for the AI to make value judgments.
+3.  **Input Specification:** Original "SOURCE DATA" was undefined. The upgrade requires a specific description including the *File Name*, *Format*, *Size*, and a *Schema Preview* (e.g., a sample of column names). This allows the AI to perform concrete field mapping.
+4.  **Actionable Task Definitions:**
+    *   **Inventory:** The term "anomalies" is subjective. The upgrade breaks it down into specific, checkable items: `missing_values`, `duplicate_records`, `non_standard_formats`, and `potential_outliers`. It also asks for a summary table of findings.
+    *   **Adaptation:** The concept of "mapping" is made explicit by requesting a "Field Mapping Table," clearly distinguishing between `source_field`, `target_project_field`, and `transformation_required`.
+    *   **Criteria:** The core task is clarified by providing a strict definition for the `[Critical]` and `[Non-critical]` labels, removing ambiguity.
+5.  **Structured Output:** The desired table format is excellent. The upgrade refines it by specifying the `sort order` (Material Type, then Critical first, then Non-critical) and introducing an optional "Notes/Assumptions" column for better traceability. It also formally requests an "Ambiguities & Clarifications" log.
+6.  **Process & Deliverables:** The final prompt introduces clear "DELIVERABLES" (Inventory Summary, Adaptation Plan, Criteria Table, Clarifications Log) and "EXECUTION CONSTRAINTS" (e.g., explain reasoning, don't hallucinate, use markdown). This guides the AI's workflow and sets expectations for quality.
+7.  **Token Efficiency:** The entire prompt is written in a direct, imperative tone, minimizing conversational filler and maximizing signal for the AI model.
+</PROMPT_UPGRADE_RATIONALE>
+
+<FINAL_PROMPT>
+**ROLE**
+Act as a Senior Data Analyst with deep expertise in data warehousing, ETL (Extract, Transform, Load) processes, and data quality assessment. Your output should be pragmatic, precise, and immediately actionable.
+
+**PROJECT CONTEXT**
+- **Project Goal:** [Describe the ultimate objective of the project, e.g., "To build a churn prediction model," "To create a marketing segmentation dashboard," "To populate a new CRM system."]
+- **Data Usage:** [Explain precisely how this data will be used, e.g., "The data will be used to train a machine learning classification model," "The data will be ingested into PowerBI for weekly KPI reporting," "The data will be migrated to Salesforce for sales team automation."]
+- **Success Criteria:** [Specify what a "good" dataset looks like for this project, e.g., "Each row must represent a unique customer," "The `revenue` field must be in USD and accurate to two decimal places," "The `status` field must use only our internal controlled vocabulary."]
+
+**SOURCE DATA**
+- **File Name & Format:** [e.g., `historical_sales_data.csv`, `customer_master.xlsx`, `raw_events.json`]
+- **Approximate Volume:** [e.g., ~50,000 rows, 15 columns]
+- **Schema Preview:** [Provide the first few column headers and, if possible, 2-3 example rows. This is crucial for concrete field mapping.]
+
+**TASKS**
+
+**1. Data Inventory & Quality Audit**
+   - Conduct a thorough review of the entire dataset to identify all distinct material or record types present.
+   - Systematically flag and summarize the following, providing representative examples:
+     - **Missing Values:** Count per column and note any patterns.
+     - **Duplicate Records:** Identify duplicate rows or duplicate unique identifiers.
+     - **Non-Standard Formats:** Flag inconsistencies in dates, phone numbers, currency, string casing, etc.
+     - **Anomalies:** Flag potential outliers or data entry errors in key numeric or categorical fields.
+   - **Output:** Create a "Data Quality Summary" table with columns: `Field Name`, `Data Type`, `% Missing`, `# Duplicates`, `Quality Issues Flagged`.
+
+**2. Data Adaptation & Mapping for Project**
+   - Create a "Field Mapping & Transformation Plan." This maps the source dataset to the needs defined in the Project Context.
+   - For each relevant source field, specify:
+     - **Target Field:** The name it should have in the project.
+     - **Use as-is?** (Y/N) - Indicate if it requires no modification.
+     - **Transformation Required?** If 'No' to above, specify the exact transformation (e.g., `convert to date format YYYY-MM-DD`, `normalize to lowercase`, `map values 'A', 'B' to 'Premium', 'Basic'`).
+   - **Output:** Create a table with columns: `Source Field`, `Target Field`, `Data Type`, `Use As-Is? (Y/N)`, `Required Transformation / Normalization Rule`.
+
+**3. Selection & Evaluation Criteria by Material Type**
+   For each distinct material type identified in Task 1, define the criteria for selection and evaluation. These are the rules for determining if a record is valid and valuable for the project.
+   - **Definition - [Critical] Criteria:** Blocking. A record that fails ANY critical criterion is disqualified from the project and must be excluded or sent for remediation.
+   - **Definition - [Non-critical] Criteria:** Desirable. Failure does not block the record, but affects its quality score, priority, or trustworthiness.
+
+**4. Consolidated Output Table**
+   This is the core deliverable. Consolidate the criteria from Task 3 into a single, well-structured table. This table will serve as the project's data quality rulebook.
+   
+   **Table Format (Markdown):**
+   | Material Type | Criterion | Label (Critical/Non-critical) | Description/Condition | Source Field(s) | Notes/Assumptions |
+   |---|---|---|---|---|---|
+   | *e.g., Customer Record* | *e.g., Must have unique customer ID* | *Critical* | *e.g., `customer_id` must be present, non-null, and unique across the dataset.* | *`user_id`* | *e.g., Assume legacy IDs are not needed.* |
+
+   **Sorting:** Sort the table first by `Material Type` (alphabetically), then by `Label` (Critical first, then Non-critical).
+
+**OUTPUT FORMAT & DELIVERABLES**
+Produce the following as a single response in Markdown format:
+
+1.  **Executive Summary:** A brief paragraph summarizing the overall health of the data and the main challenges for the project.
+2.  **Material Type Counts:** A summary listing each Material Type found and the count of Critical and Non-critical criteria associated with it.
+3.  **Data Quality Summary Table** (from Task 1).
+4.  **Field Mapping & Transformation Plan** (from Task 2).
+5.  **Consolidated Criteria Table** (from Task 4).
+6.  **Ambiguities & Clarifications Log:** A numbered, actionable list of all ambiguities, assumptions made, and questions that require clarification from the project owner to proceed with confidence.
+
+**EXECUTION CONSTRAINTS**
+- **Grounding:** Base your analysis strictly on the provided PROJECT CONTEXT and SOURCE DATA. Do not hallucinate fields or make up project requirements. If information is missing, list it as an assumption or an item in the Clarifications Log.
+- **Reasoning:** Briefly explain your reasoning for classifying a criterion as `[Critical]` or `[Non-critical]`, especially in edge cases.
+- **Formatting:** Use Markdown for all output. Ensure tables are correctly formatted and easy to read.
+- **No Code:** Perform the analysis conceptually. Do not write executable code (Python, SQL, etc.) unless specifically requested for a transformation rule.
+</FINAL_PROMPT>

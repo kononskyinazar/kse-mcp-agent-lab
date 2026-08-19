@@ -1,0 +1,37 @@
+# --- secrets / local config ---
+.env
+.env.local
+*.local.json
+config/*.local.json
+config/mcp.local.json
+secrets/
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- node ---
+node_modules/
+npm-debug.log*
+.playwright-mcp/
+
+# --- data / runtime artifacts ---
+data/raw/
+data/cache/
+*.sqlite
+*.sqlite3
+*.db
+logs/
+runs/
+.tmp/
+
+# --- os / editor ---
+.DS_Store
+.idea/
+.vscode/
