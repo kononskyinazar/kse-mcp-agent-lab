@@ -55,9 +55,11 @@ def test_no_secret_looking_values_are_committed():
     tracked = subprocess.run(
         ["git", "ls-files"], capture_output=True, text=True, cwd=ROOT
     ).stdout.split()
+    this_file = Path(__file__).relative_to(ROOT).as_posix()
     suspicious = []
     for name in tracked:
-        if name.startswith("data/tenders/") or name.startswith("fixtures/"):
+        # Skip the harvested corpus, and this file: it names the markers it looks for.
+        if name.startswith("data/tenders/") or name.startswith("fixtures/") or name == this_file:
             continue
         path = Path(ROOT / name)
         if not path.is_file() or path.suffix in {".gz", ".png"}:
