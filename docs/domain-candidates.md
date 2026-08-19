@@ -1,4 +1,8 @@
-# Domain candidates (decision pending)
+# Domain candidates (DECIDED: Candidate A)
+
+> **Decision, 2026-08-19:** Candidate A - procurement red-flag screening, with Obsidian
+> Local REST API MCP as the existing server and LangGraph as the agent framework.
+> Design: [`superpowers/specs/2026-08-19-procurement-screening-design.md`](superpowers/specs/2026-08-19-procurement-screening-design.md).
 
 Constraints every candidate must satisfy, taken from the assignment:
 
