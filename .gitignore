@@ -38,6 +38,8 @@ runs/
 Obsidian*
 !demo-vault/
 
+!demo-vault/**
+
 # --- os / editor ---
 .DS_Store
 .idea/

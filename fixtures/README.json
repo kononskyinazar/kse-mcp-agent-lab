@@ -1,0 +1,9 @@
+{
+  "recorded_from": "https://public.api.openprocurement.org/api/2.5",
+  "files": [
+    "tenders.0fbd08edbfbaa01a.json",
+    "tenders_b022cec3c4464496a50de586bb383d47.2d6d00c4f0eb3c53.json",
+    "tenders_f0fef7c757224d7a8c78d8112b9ab53a.9b66bb55bc3e24f0.json"
+  ],
+  "note": "Responses are stored verbatim. Replay mode serves them through the same parsing path as a live call; there is no branch that returns a prepared answer."
+}

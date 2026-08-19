@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import gzip
 import json
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .errors import ErrorCode, ToolError, data_integrity, not_found
 from .models import Tender
@@ -48,9 +49,22 @@ def _read_document(path: Path) -> dict[str, Any]:
     return json.loads(raw)
 
 
+UUID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+
+
 class DatasetStore:
-    def __init__(self, directory: Path) -> None:
+    """The prepared dataset, optionally backed by a live or replayed fetch.
+
+    A tender absent from the dataset can still be resolved when a client is
+    supplied: live mode calls the API, replay mode serves a recorded response.
+    Either way the document goes through the same normalisation as a stored one,
+    so a fixture cannot short-circuit the parsing path.
+    """
+
+    def __init__(self, directory: Path, client: Any | None = None) -> None:
         self.directory = Path(directory)
+        self.client = client
+        self._fetched: set[str] = set()
         self._tenders: dict[str, Tender] = {}
         self._by_tender_id: dict[str, str] = {}
         self._by_buyer: dict[str, list[str]] = defaultdict(list)
@@ -121,13 +135,34 @@ class DatasetStore:
         uuid = self._tenders.get(identifier) and identifier
         if uuid is None:
             uuid = self._by_tender_id.get(identifier)
-        if uuid is None or uuid not in self._tenders:
-            raise not_found(
-                f"tender {identifier!r} is not in the prepared dataset",
-                identifier=identifier,
-                dataset_size=len(self._tenders),
-            )
-        return self._tenders[uuid]
+        if uuid is not None and uuid in self._tenders:
+            return self._tenders[uuid]
+
+        if self.client is not None and UUID_PATTERN.match(identifier):
+            return self._fetch(identifier)
+
+        raise not_found(
+            f"tender {identifier!r} is not in the prepared dataset",
+            identifier=identifier,
+            dataset_size=len(self._tenders),
+            hint=(
+                "the human-facing tenderID cannot be resolved upstream; supply the "
+                "32-character document UUID to fetch a tender outside the dataset"
+            ),
+        )
+
+    def _fetch(self, uuid: str) -> Tender:
+        payload = self.client.get_json(f"/tenders/{uuid}")
+        document = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(document, dict):
+            raise data_integrity("upstream response carries no tender document", uuid=uuid)
+        tender = normalize_tender(document)
+        self._index(tender)
+        self._fetched.add(tender.uuid)
+        return tender
+
+    def was_fetched(self, uuid: str) -> bool:
+        return uuid in self._fetched
 
     def for_buyer(self, edrpou: str) -> list[Tender]:
         return [self._tenders[uuid] for uuid in self._by_buyer.get(edrpou, ())]

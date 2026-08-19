@@ -223,22 +223,57 @@ def test_unrelated_subcontractor_does_not_fire(tmp_path):
 
 # --- supplier horizon ------------------------------------------------------
 
+def deep_history():
+    """Tenders old enough that the dataset horizon can support a novelty claim."""
+    return [
+        tender_doc(
+            uuid=f"hist{i}", tender_id=f"UA-hist-{i}",
+            published=BASE - timedelta(days=200 - i * 20),
+            awards=[award(edrpou="40000001", date=BASE - timedelta(days=195 - i * 20))],
+        )
+        for i in range(3)
+    ]
+
+
 def test_supplier_new_to_the_dataset_is_flagged_as_a_proxy(tmp_path):
     document = tender_doc(bids=[bid()], awards=[award(edrpou="49999999")])
-    result = run_screen(tmp_path, document)
+    result = run_screen(tmp_path, document, others=deep_history())
 
     finding = next(f for f in result["advisories"] if f["rule_id"] == "supplier_new_to_dataset")
     assert "NOT a company registration date" in finding["evidence"]["note"]
 
 
+def test_novelty_is_not_claimed_when_the_dataset_is_too_shallow(tmp_path):
+    """A short window cannot tell a new supplier from one that predates it."""
+    document = tender_doc(bids=[bid()], awards=[award(edrpou="49999999")])
+    result = run_screen(tmp_path, document)
+
+    assert "supplier_new_to_dataset" not in fired(result)
+    assert "reaches back only" in skipped(result)["supplier_new_to_dataset"]
+
+
+def test_price_quotation_is_exempt_from_the_open_tender_bid_window(tmp_path):
+    """The open-tender minimum does not govern electronic-catalogue quotations."""
+    document = tender_doc(procedure="priceQuotation", tender_end=BASE + timedelta(days=2))
+    result = run_screen(tmp_path, document)
+
+    assert "bid_window_below_statutory_minimum" not in fired(result)
+    assert "separate order" in skipped(result)["bid_window_below_statutory_minimum"]
+
+
+def test_direct_contract_does_not_trip_the_no_discount_rule(tmp_path):
+    """A direct contract is signed at its own value, so the ratio is always 1."""
+    document = tender_doc(procedure="reporting", amount=40_000.0, awards=[award(amount=40_000.0)])
+    result = run_screen(tmp_path, document)
+
+    assert "award_ratio_no_discount" not in fired(result)
+    assert "no competitive discount" in skipped(result)["award_ratio_no_discount"]
+
+
 def test_long_standing_supplier_is_not_flagged(tmp_path):
-    old = tender_doc(
-        uuid="old", tender_id="UA-old", published=BASE - timedelta(days=300),
-        awards=[award(edrpou="40000001", date=BASE - timedelta(days=290))],
-    )
     current = tender_doc(uuid="cur", tender_id="UA-cur", awards=[award(edrpou="40000001")])
 
-    assert "supplier_new_to_dataset" not in fired(run_screen(tmp_path, current, others=[old]))
+    assert "supplier_new_to_dataset" not in fired(run_screen(tmp_path, current, others=deep_history()))
 
 
 # --- specification tailoring ----------------------------------------------

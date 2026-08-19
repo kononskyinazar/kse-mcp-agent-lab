@@ -61,7 +61,12 @@ rules:
 
   supplier_new_to_dataset:
     class: advisory
-    weight: 10
+    # Deliberately low. Measured against the shipped 30-day sweep this rule
+    # fires for roughly 58% of awarded tenders, because a four-month horizon
+    # cannot tell a genuinely new supplier from one that simply predates the
+    # window. It is kept because it is visible in the evidence chain and becomes
+    # informative with a longer sweep, not because it discriminates today.
+    weight: 6
     title: Winning supplier first appears in the dataset shortly before this notice
     days_before_notice: 90
 

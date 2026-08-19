@@ -47,6 +47,11 @@ class BidWindowBelowMinimum:
             return "no publication date, so the applicable regime cannot be selected"
         if tender.tender_period.end is None:
             return "tender period has no end date"
+        if not ctx.book.period_rule_applies_to(tender.procedure_type, tender.published_at):
+            return (
+                f"no sourced minimum bid period is configured for procedure "
+                f"{tender.procedure_type!r}; it runs under a separate order with its own timetable"
+            )
         return None
 
     def check(self, ctx: RuleContext) -> Finding | None:
@@ -208,6 +213,11 @@ class AwardRatioLowball:
 def _award_ratio_applies(ctx: RuleContext) -> str | None:
     tender = ctx.tender
     award = tender.active_award
+    if tender.is_direct_award:
+        # A direct contract is signed at its own stated value, so the award
+        # always equals the expectation. Measuring "no discount" there would
+        # flag every direct contract and mean nothing.
+        return f"procedure {tender.procedure_type!r} awards directly, so there is no competitive discount to measure"
     if award is None:
         return "no active award, so there is no award price to compare"
     if not tender.amount:
@@ -352,6 +362,21 @@ class SupplierNewToDataset:
             return "no identified winning supplier"
         if ctx.tender.published_at is None:
             return "no publication date to measure against"
+
+        # The proxy is only meaningful when the dataset reaches far enough back
+        # to tell "new supplier" apart from "supplier that predates the window".
+        limit = int(ctx.config(self.id).get("days_before_notice", 90))
+        earliest = getattr(ctx.store.data_window(), "earliest_publication", None)
+        if earliest:
+            from datetime import datetime as _dt
+
+            horizon_days = (ctx.tender.published_at - _dt.fromisoformat(earliest)).total_seconds() / 86400.0
+            if horizon_days < limit:
+                return (
+                    f"the dataset reaches back only {horizon_days:.0f} days before this notice, "
+                    f"which is less than the {limit}-day novelty window, so absence of earlier "
+                    f"awards would say nothing about the supplier"
+                )
         return None
 
     def check(self, ctx: RuleContext) -> Finding | None:

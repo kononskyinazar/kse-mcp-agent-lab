@@ -44,6 +44,21 @@ regimes:
       source_point: "пункт 11"
       verification: primary
 
+    # Procedures the minimum bid period below actually governs. The figures come
+    # from the rules for відкриті торги з особливостями and do NOT govern
+    # priceQuotation (electronic-catalogue price quotations), which runs under a
+    # separate order with its own, shorter timetable. Applying the open-tender
+    # minimum to a price quotation flagged every single one in the demonstration
+    # dataset as a statutory breach, which is exactly the false accusation this
+    # configuration exists to prevent. No entry is written for priceQuotation
+    # because no primary source for its minimum has been read yet; the rule
+    # reports itself as not applicable instead of guessing.
+    minimum_tender_period_procedures:
+      - aboveThreshold
+      - aboveThresholdUA
+      - aboveThresholdEU
+      - aboveThresholdUA.defense
+
     # Minimum bid submission period, counted from publication of the notice.
     minimum_tender_period_days:
       - subject: goods_and_services

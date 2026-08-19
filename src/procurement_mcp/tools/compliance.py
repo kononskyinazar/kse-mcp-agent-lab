@@ -131,7 +131,11 @@ def run(config: Configuration, store: DatasetStore, arguments: dict[str, Any]) -
                 }
             )
 
-    if tender.is_competitive_procedure and tender.tender_period.end is not None:
+    if (
+        tender.is_competitive_procedure
+        and tender.tender_period.end is not None
+        and book.period_rule_applies_to(tender.procedure_type, tender.published_at)
+    ):
         minimum = book.minimum_tender_period_days(subject, tender.published_at)
         thresholds["minimum_tender_period_days"] = minimum.to_payload()
         actual = (tender.tender_period.end - tender.published_at).total_seconds() / 86400.0
@@ -156,6 +160,20 @@ def run(config: Configuration, store: DatasetStore, arguments: dict[str, Any]) -
                     "statute_reference": minimum.to_payload(),
                 }
             )
+
+    if tender.is_competitive_procedure and not book.period_rule_applies_to(
+        tender.procedure_type, tender.published_at
+    ):
+        checks.append(
+            {
+                "condition": "bid_period_meets_minimum",
+                "result": "not_applicable",
+                "explanation": (
+                    f"no sourced minimum bid period is configured for procedure "
+                    f"{tender.procedure_type!r}; it is governed by a separate order"
+                ),
+            }
+        )
 
     return {
         "status": "ok",

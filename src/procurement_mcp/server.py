@@ -20,6 +20,7 @@ from mcp.server.stdio import stdio_server
 
 from .config import Configuration
 from .errors import ErrorCode, ToolError
+from .http import ProzorroClient, ReplayClient
 from .store import DatasetStore
 from .tools import compliance, concentration, find, screen
 
@@ -60,10 +61,19 @@ class ToolHost:
             self._config = Configuration.load()
         return self._config
 
+    def _client(self):
+        """Replay from recorded responses, or call the API. Never both."""
+        settings = self.config.settings
+        if settings.offline:
+            return ReplayClient(settings.fixture_dir)
+        return ProzorroClient(
+            requests_per_second=settings.rate_limit_rps, timeout=settings.timeout_seconds
+        )
+
     @property
     def store(self) -> DatasetStore:
         if self._store is None:
-            store = DatasetStore(self.config.settings.data_dir)
+            store = DatasetStore(self.config.settings.data_dir, client=self._client())
             store.load()
             if store.skipped:
                 logger.warning("skipped %d unreadable dataset documents", len(store.skipped))

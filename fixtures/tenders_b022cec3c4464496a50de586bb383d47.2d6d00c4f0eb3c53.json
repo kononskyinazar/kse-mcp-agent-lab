@@ -1,0 +1,248 @@
+{
+ "data": {
+  "date": "2026-08-19T12:56:17.449697+03:00",
+  "dateModified": "2026-08-19T14:06:42.222265+03:00",
+  "dateCreated": "2026-08-19T12:56:17.218209+03:00",
+  "tenderID": "UA-2026-08-19-006044-a",
+  "owner": "e-tender.biz",
+  "title": "Картопля столова по ДК 021:2015 код 03210000-6 Зернові культури та картопля",
+  "mainProcurementCategory": "goods",
+  "procurementMethod": "limited",
+  "plans": [
+   {
+    "id": "95d96644726a4ebdb23d566a8feb4f42"
+   }
+  ],
+  "contractChangeRationaleTypes": {
+   "durationExtension": {
+    "description_en": "Extension of the period of the procurement contract duration and the term of obligations fulfilment regarding the transfer of goods, implementation of works and provision of services in case of documented objective circumstances that led to such extension, including circumstances of force majeure, delays in funding of procuring entitys expenditures, provided that such changes will not increase the sum of money specified in the procurement contract",
+    "title_en": "Clause 4, Part 5, Article 41",
+    "description_uk": "Продовження строку дії договору про закупівлю та строку виконання зобов’язань щодо передачі товару, виконання робіт, надання послуг у разі виникнення документально підтверджених об’єктивних обставин, що спричинили таке продовження, у тому числі обставин непереборної сили, затримки фінансування витрат замовника, за умови що такі зміни не призведуть до збільшення суми, визначеної в договорі про закупівлю",
+    "title_uk": "Пункт 4 частини 5 статті 41",
+    "uri": "https://zakon.rada.gov.ua/laws/show/922-19/ed20241023#n1760",
+    "scheme": "LAW922"
+   },
+   "fiscalYearExtension": {
+    "description_en": "Еffect of the procurement contract may be extended for a period sufficient for conduction of the procurement procedure/simplified procurement at the beginning of the next year in volume that does not exceed 20% of the sum specified in the initial procurement contract concluded in the previous year, if expenditures for achieving this goal are approved in the prescribed manner",
+    "title_en": "Part 6 of Article 41",
+    "description_uk": "Дія договору про закупівлю може бути продовжена на строк, достатній для проведення процедури закупівлі/спрощеної закупівлі на початку наступного року в обсязі, що не перевищує 20 відсотків суми, визначеної в початковому договорі про закупівлю, укладеному в попередньому році, якщо видатки на досягнення цієї цілі затверджено в установленому порядку",
+    "title_uk": "Частина 6 статті 41",
+    "uri": "https://zakon.rada.gov.ua/laws/show/922-19/ed20241023#n1760",
+    "scheme": "LAW922"
+   },
+   "priceClarification": {
+    "description_en": "Drawing up a contract price, specified in accordance with the approved project documentation for the purchase contract, specified in paragraph three of part one of this article",
+    "title_en": "Clause 2, Part 7, Article 41",
+    "description_uk": "Складання договірної ціни, уточненої відповідно до затвердженої проектної документації до договору про закупівлю, зазначеного в абзаці третьому частини першої цієї статті",
+    "title_uk": "Пункт 2 частини 7 статті 41",
+    "uri": "https://zakon.rada.gov.ua/laws/show/922-19/ed20241023#n1760",
+    "scheme": "LAW922"
+   },
+   "itemPriceVariation": {
+    "description_en": "An increase in the price per unit of goods by up to 10 percent in proportion to the increase in the market price of such goods in the event of fluctuations in the market price of such goods, provided that such a change does not lead to an increase in the amount specified in the procurement contract; - no more than once every 90 days from the date of signing the procurement contract/making changes to such a contract regarding an increase in the price per unit of goods. The restriction on the timing of changes in the price per unit of goods does not apply in cases of changes in the terms of the contract for the procurement of gasoline and diesel fuel, natural gas, and electricity",
+    "title_en": "Clause 2, Part 5, Article 41",
+    "description_uk": "Збільшення ціни за одиницю товару до 10 відсотків пропорційно збільшенню ціни такого товару на ринку у разі коливання ціни такого товару на ринку за умови, що така зміна не призведе до збільшення суми, визначеної в договорі про закупівлю, - не частіше ніж один раз на 90 днів з моменту підписання договору про закупівлю/внесення змін до такого договору щодо збільшення ціни за одиницю товару. Обмеження щодо строків зміни ціни за одиницю товару не застосовується у випадках зміни умов договору про закупівлю бензину та дизельного пального, природного газу та електричної енергії",
+    "title_uk": "Пункт 2 частини 5 статті 41",
+    "uri": "https://zakon.rada.gov.ua/laws/show/922-19/ed20241023#n1760",
+    "scheme": "LAW922"
+   },
+   "priceReduction": {
+    "description_en": "Аpproval of price changes in the procurement contract in the direction of reduction (without changing the quantity (volume) and quality of goods, works and services), including in case of fluctuations in the price of goods on the market",
+    "title_en": "Clause 5, Part 5, Article 41",
+    "description_uk": "Погодження зміни ціни в договорі про закупівлю в бік зменшення (без зміни кількості (обсягу) та якості товарів, робіт і послуг), у тому числі у разі коливання ціни товару на ринку",
+    "title_uk": "Пункт 5 частини 5 статті 41",
+    "uri": "https://zakon.rada.gov.ua/laws/show/922-19/ed20241023#n1760",
+    "scheme": "LAW922"
+   },
+   "qualityImprovement": {
+    "description_en": "Іmprovement of the item's quality, provided that such improvement will not increase the sum of money specified in the procurement contract",
+    "title_en": "Clause 3, Part 5, Article 41",
+    "description_uk": "Покращення якості предмета закупівлі, за умови що таке покращення не призведе до збільшення суми, визначеної в договорі про закупівлю",
+    "title_uk": "Пункт 3 частини 5 статті 41",
+    "uri": "https://zakon.rada.gov.ua/laws/show/922-19/ed20241023#n1760",
+    "scheme": "LAW922"
+   },
+   "taxRate": {
+    "description_en": "Changes in the price in the purchase contract due to changes in tax and duty rates and/or changes in the conditions for granting tax benefits - in proportion to the change in such rates and/or tax benefits",
+    "title_en": "Clause 6, Part 5, Article 41",
+    "description_uk": "Зміни ціни в договорі про закупівлю у зв’язку зі зміною ставок податків і зборів та/або зміною умов щодо надання пільг з оподаткування - пропорційно до зміни таких ставок та/або пільг з оподаткування",
+    "title_uk": "Пункт 6 частини 5 статті 41",
+    "uri": "https://zakon.rada.gov.ua/laws/show/922-19/ed20241023#n1760",
+    "scheme": "LAW922"
+   },
+   "thirdParty": {
+    "description_en": "Changes in the consumer price index established in accordance with the legislation by state statistics bodies, changes in foreign currency exchange rates, changes in stock market quotes or Platts, ARGUS indicators of regulated prices (tariffs) and standards applied in the procurement contract, if the procurement contract establishes the procedure for changing the price",
+    "title_en": "Clause 7, Part 5, Article 41",
+    "description_uk": "Зміни встановленого згідно із законодавством органами державної статистики індексу споживчих цін, зміни курсу іноземної валюти, зміни біржових котирувань або показників Platts, ARGUS регульованих цін (тарифів) і нормативів, що застосовуються в договорі про закупівлю, у разі встановлення в договорі про закупівлю порядку зміни ціни",
+    "title_uk": "Пункт 7 частини 5 статті 41",
+    "uri": "https://zakon.rada.gov.ua/laws/show/922-19/ed20241023#n1760",
+    "scheme": "LAW922"
+   },
+   "volumeCuts": {
+    "description_en": "Reduction of the procurement's volume, particularly taking into account the actual expenditures of the procuring entity",
+    "title_en": "Clause 1, Part 5, Article 41",
+    "description_uk": "Зменшення обсягів закупівлі, зокрема з урахуванням фактичного обсягу видатків замовника",
+    "title_uk": "Пункт 1 частини 5 статті 41",
+    "uri": "https://zakon.rada.gov.ua/laws/show/922-19/ed20241023#n1760",
+    "scheme": "LAW922"
+   }
+  },
+  "procurementMethodType": "reporting",
+  "procuringEntity": {
+   "name": "Комунальне некомерційне підприємство \"Обласний дитячий протитуберкульозний санаторій \"Руська Поляна\" Черкаської обласної ради\"",
+   "name_en": "Communal non-profit enterprise\"Regional Children's Anti- Tuberculosis Sanatorium \"Ruska Polyana\" of Cherkasy  Oblast Council\"",
+   "identifier": {
+    "scheme": "UA-EDR",
+    "id": "02004858",
+    "legalName": "Комунальне некомерційне підприємство \"Обласний дитячий протитуберкульозний санаторій \"Руська Поляна\" Черкаської обласної ради\"",
+    "legalName_en": "Communal non-profit enterprise\"Regional Children's Anti- Tuberculosis Sanatorium \"Ruska Polyana\" of Cherkasy  Oblast Council\""
+   },
+   "address": {
+    "streetAddress": "вулиця Лісова,  будинок 1А",
+    "locality": "село Руська Поляна",
+    "region": "Черкаська область",
+    "postalCode": "19602",
+    "countryName": "Україна"
+   },
+   "kind": "general",
+   "contactPoint": {
+    "name": "Ворона Лілія Леонідівна",
+    "email": "ruspolyana2017@gmail.com",
+    "telephone": "0472303292"
+   }
+  },
+  "items": [
+   {
+    "id": "0824dfef9eb4457a9cf861144ab54143",
+    "description": "Картопля столова",
+    "unit": {
+     "name": "кілограм",
+     "code": "KGM"
+    },
+    "quantity": 350.0,
+    "classification": {
+     "description": "Зернові культури та картопля",
+     "scheme": "ДК021",
+     "id": "03210000-6"
+    },
+    "deliveryDate": {
+     "endDate": "2026-12-31T00:00:00+02:00"
+    },
+    "deliveryAddress": {
+     "streetAddress": "вулиця Лісова,  будинок 1А",
+     "locality": "село Руська Поляна",
+     "region": "Черкаська область",
+     "postalCode": "19602",
+     "countryName": "Україна"
+    }
+   }
+  ],
+  "value": {
+   "amount": 5110.0,
+   "currency": "UAH",
+   "valueAddedTaxIncluded": false
+  },
+  "status": "active",
+  "awards": [
+   {
+    "id": "195ddc5e553d4384ac9298efdf6f564b",
+    "qualified": true,
+    "status": "active",
+    "date": "2026-08-19T12:56:17.766703+03:00",
+    "suppliers": [
+     {
+      "name": "ФОП ЦИБЛІЄВ Сергій Вячеславович",
+      "identifier": {
+       "scheme": "UA-EDR",
+       "id": "3191120136",
+       "legalName": "ФОП ЦИБЛІЄВ Сергій Вячеславович"
+      },
+      "address": {
+       "streetAddress": "вул. Смілянська, буд.130, кв.33",
+       "locality": "Черкаси",
+       "region": "Черкаська область",
+       "postalCode": "18000",
+       "countryName": "Україна"
+      },
+      "scale": "sme"
+     }
+    ],
+    "value": {
+     "amount": 5110.0,
+     "currency": "UAH",
+     "valueAddedTaxIncluded": false
+    }
+   }
+  ],
+  "contracts": [
+   {
+    "id": "426085f3aa7d4737ac6c7254b77e6394",
+    "status": "pending",
+    "awardID": "195ddc5e553d4384ac9298efdf6f564b",
+    "date": "2026-08-19T12:56:17.766703+03:00",
+    "contractID": "UA-2026-08-19-006044-a-a1",
+    "title": "Картопля столова по ДК 021:2015 код 03210000-6 Зернові культури та картопля",
+    "title_en": null,
+    "description": null,
+    "description_en": null,
+    "value": {
+     "amount": 5110.0,
+     "currency": "UAH",
+     "valueAddedTaxIncluded": false,
+     "amountNet": 5110.0
+    }
+   }
+  ],
+  "cancellations": [
+   {
+    "status": "draft",
+    "reasonType": "unFixable",
+    "reason": "У ході перевірки інформації, внесеної до річного плану закупівель на 2026 рік, уповноваженою особою виявлено технічну (механічну) помилку при зазначенні очікуваної вартості закупівлі.\nЗа відповідним записом річного плану:\nПредмет закупівлі: Картопля столова\nКод ДК 021:2015: 0320000-6 Зернові культури та картопля\nІдентифікатор плану: UA-P-2026-08-19-007317-a \nочікувану вартість закупівлі було помилково зазначено у розмірі 5110,00 грн без ПДВ.\nПравильна очікувана вартість закупівлі становить 6132,00 грн з ПДВ.\nДопущена помилка має технічний характер та виникла під час внесення інформації до електронної системи закупівель. З метою забезпечення достовірності інформації, що міститься в річному плані закупівель, виникла необхідність скасувати зазначений запис річного плану та створити новий запис із правильними відомостями.",
+    "id": "16ffe5deeb1649468f2a165b3d2cb70c",
+    "date": "2026-08-19T14:06:28.899711+03:00",
+    "cancellationOf": "tender",
+    "documents": [
+     {
+      "confidentiality": "public",
+      "hash": "md5:76fe566fc445ac70c99c465a1b67335b",
+      "title": "протокол.pdf",
+      "format": "application/pdf",
+      "url": "https://public-docs.prozorro.gov.ua/get/a48526ae4dc44428bcdf1cc2cfd20620?Signature=K9xt2YpDZ5gkR54d%2F%2F972flcpF%2FI3%2B2unl%2BfqgnNF91pEc5gR%2BGePrJvGw9e33MYZaWHwpx9klIP1X0mEzBGDg%3D%3D&KeyID=52462340",
+      "documentOf": "tender",
+      "language": "uk",
+      "id": "aaefe25ec2f44d749e44233042f6f45f",
+      "datePublished": "2026-08-19T14:06:42.222265+03:00",
+      "dateModified": "2026-08-19T14:06:42.222265+03:00"
+     }
+    ]
+   }
+  ],
+  "id": "b022cec3c4464496a50de586bb383d47"
+ },
+ "config": {
+  "hasAuction": false,
+  "hasAwardingOrder": true,
+  "hasValueRestriction": true,
+  "valueCurrencyEquality": true,
+  "minBidsNumber": 1,
+  "hasPrequalification": false,
+  "hasPreSelectionAgreement": false,
+  "hasTenderComplaints": false,
+  "hasAwardComplaints": false,
+  "hasCancellationComplaints": false,
+  "restricted": false,
+  "hasMultiSourcing": false,
+  "hasValueEstimation": true,
+  "clarificationUntilDuration": 0,
+  "tenderComplainRegulation": 0,
+  "awardComplainDuration": 0,
+  "cancellationComplainDuration": 0,
+  "qualificationComplainDuration": 0,
+  "qualificationDuration": 0,
+  "hasQualificationComplaints": false,
+  "minTenderingDuration": 0,
+  "enquiryPeriodRegulation": 0,
+  "hasEnquiries": false,
+  "minEnquiriesDuration": 0
+ }
+}

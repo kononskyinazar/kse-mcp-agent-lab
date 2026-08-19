@@ -1,0 +1,35 @@
+{
+  "$comment": [
+    "MCP connections for the agent. No secrets here: ${VAR} placeholders are",
+    "expanded from the process environment at connection time, so the Obsidian",
+    "API key lives in .env only.",
+    "Machine-specific overrides belong in config/mcp.local.json, which is ignored.",
+    "PROCUREMENT_MCP_PYTHON should point at the project virtualenv interpreter, e.g. .venv/bin/python."
+  ],
+  "mcpServers": {
+    "obsidian": {
+      "description": "Approved existing server: bridge to the Obsidian Local REST API plugin. Reads the buyer watchlist and prior findings, writes the findings note back.",
+      "command": "${OBSIDIAN_MCP_COMMAND:-uvx}",
+      "args": [
+        "mcp-obsidian"
+      ],
+      "env": {
+        "OBSIDIAN_API_KEY": "${OBSIDIAN_API_KEY}",
+        "OBSIDIAN_HOST": "${OBSIDIAN_HOST}",
+        "OBSIDIAN_PORT": "${OBSIDIAN_PORT}"
+      }
+    },
+    "procurement": {
+      "description": "Custom server in this repository: red-flag screening, concentration, threshold compliance and constrained retrieval over the prepared Prozorro dataset.",
+      "command": "${PROCUREMENT_MCP_PYTHON:-python3}",
+      "args": [
+        "-m",
+        "procurement_mcp.server"
+      ],
+      "env": {
+        "PYTHONPATH": "src",
+        "CUSTOM_MCP_OFFLINE": "${CUSTOM_MCP_OFFLINE}"
+      }
+    }
+  }
+}

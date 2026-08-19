@@ -1,5 +1,7 @@
 """Tool contracts: schemas, empty-versus-error, and filter behaviour."""
 
+import json
+
 from datetime import timedelta
 
 import pytest
@@ -293,3 +295,59 @@ def test_boolean_is_not_accepted_where_an_integer_is_declared():
     schema = {"type": "object", "properties": {"limit": {"type": "integer"}}, "additionalProperties": False}
     with pytest.raises(ToolError):
         check_arguments({"limit": True}, schema, tool="t")
+
+
+# --- replay and live fetch -------------------------------------------------
+
+def test_replayed_document_goes_through_the_normal_parsing_path(tmp_path):
+    """A fixture must be parsed like a live response, not injected as an answer."""
+    from procurement_mcp.http import ReplayClient, fixture_key
+    from procurement_mcp.store import DatasetStore
+
+    uuid = "a" * 32
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    document = tender_doc(uuid=uuid, tender_id="UA-replayed", amount=250_000.0,
+                          procedure="reporting", awards=[award(amount=250_000.0)])
+    (fixtures / fixture_key(f"/tenders/{uuid}", None)).write_text(
+        json.dumps({"data": document}, ensure_ascii=False), encoding="utf-8"
+    )
+
+    make_store(tmp_path, [tender_doc(uuid="other1", tender_id="UA-other")])
+    store = DatasetStore(tmp_path, client=ReplayClient(fixtures)).load()
+    result = screen.run(make_config(tmp_path), store, {"tender_identifier": uuid})
+
+    assert result["tender"]["tender_id"] == "UA-replayed"
+    assert store.was_fetched(uuid)
+    assert result["has_blocking"] is True, "the replayed document is screened by the same rules"
+
+
+def test_missing_fixture_is_reported_and_never_falls_back(tmp_path):
+    from procurement_mcp.http import ReplayClient
+    from procurement_mcp.store import DatasetStore
+
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    make_store(tmp_path, [tender_doc(uuid="other1", tender_id="UA-other")])
+    store = DatasetStore(tmp_path, client=ReplayClient(fixtures)).load()
+
+    with pytest.raises(ToolError) as excinfo:
+        screen.run(make_config(tmp_path), store, {"tender_identifier": "b" * 32})
+
+    assert excinfo.value.code == ErrorCode.FIXTURE_MISSING
+
+
+def test_a_tender_id_cannot_be_fetched_upstream_and_says_why(tmp_path):
+    from procurement_mcp.http import ReplayClient
+    from procurement_mcp.store import DatasetStore
+
+    fixtures = tmp_path / "fixtures"
+    fixtures.mkdir()
+    make_store(tmp_path, [tender_doc(uuid="other1", tender_id="UA-other")])
+    store = DatasetStore(tmp_path, client=ReplayClient(fixtures)).load()
+
+    with pytest.raises(ToolError) as excinfo:
+        screen.run(make_config(tmp_path), store, {"tender_identifier": "UA-2026-01-01-000001-a"})
+
+    assert excinfo.value.code == ErrorCode.NOT_FOUND
+    assert "document UUID" in excinfo.value.details["hint"]

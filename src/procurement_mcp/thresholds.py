@@ -174,5 +174,16 @@ class StatutoryBook:
             verification=entry.get("verification", "unstated"),
         )
 
+    def period_rule_applies_to(self, procedure_type: str | None, moment: datetime | date) -> bool:
+        """Whether the configured minimum bid period governs this procedure.
+
+        Absence of an entry means "no sourced minimum", not "no minimum": the
+        caller reports the rule as not applicable rather than inventing one.
+        """
+        governed = self.regime_at(moment).payload.get("minimum_tender_period_procedures")
+        if not governed:
+            return True
+        return procedure_type in set(governed)
+
     def tolerance_days(self, moment: datetime | date) -> float:
         return float(self.regime_at(moment).payload.get("tender_period_tolerance_days", 0.0))
