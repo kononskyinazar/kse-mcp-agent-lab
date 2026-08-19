@@ -443,3 +443,21 @@ def test_every_configured_threshold_cites_a_primary_source():
         assert hit.verification == "primary", f"{hit.subject} rests on a {hit.verification} source"
         assert hit.source_point, f"{hit.subject} has no citation"
         assert "zakon.rada.gov.ua" in hit.source
+
+
+def test_a_competitive_tender_nobody_bid_on_is_flagged(tmp_path):
+    """The strongest participation failure was previously skipped entirely."""
+    document = tender_doc(uuid="empty1", tender_id="UA-empty", status="unsuccessful", bids=[])
+    result = run_screen(tmp_path, document)
+
+    finding = next(f for f in result["advisories"] if f["rule_id"] == "effective_single_participation")
+    assert finding["observed_value"] == 0
+    assert finding["evidence"]["outcome"] == "no award"
+    assert "drew no participants" in finding["evidence"]["note"]
+
+
+def test_a_tender_still_in_qualification_without_awards_is_skipped(tmp_path):
+    document = tender_doc(uuid="pend01", tender_id="UA-pending", status="active.qualification", bids=[])
+    result = run_screen(tmp_path, document)
+
+    assert "neither an award nor a conclusion" in skipped(result)["effective_single_participation"]

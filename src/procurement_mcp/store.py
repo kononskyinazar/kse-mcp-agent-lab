@@ -64,7 +64,11 @@ class DatasetStore:
     def __init__(self, directory: Path, client: Any | None = None) -> None:
         self.directory = Path(directory)
         self.client = client
-        self._fetched: set[str] = set()
+        # Tenders fetched from outside the prepared dataset are kept apart from
+        # it. Indexing them would let a replay or live lookup change the
+        # concentration, streak and retrieval answers given afterwards in the
+        # same process, so the same call would depend on what preceded it.
+        self._external: dict[str, Tender] = {}
         self._tenders: dict[str, Tender] = {}
         self._by_tender_id: dict[str, str] = {}
         self._by_buyer: dict[str, list[str]] = defaultdict(list)
@@ -132,11 +136,13 @@ class DatasetStore:
 
     def get(self, identifier: str) -> Tender:
         """Look up by document UUID or by the human-facing tenderID."""
-        uuid = self._tenders.get(identifier) and identifier
-        if uuid is None:
-            uuid = self._by_tender_id.get(identifier)
-        if uuid is not None and uuid in self._tenders:
+        if identifier in self._tenders:
+            return self._tenders[identifier]
+        uuid = self._by_tender_id.get(identifier)
+        if uuid is not None:
             return self._tenders[uuid]
+        if identifier in self._external:
+            return self._external[identifier]
 
         if self.client is not None and UUID_PATTERN.match(identifier):
             return self._fetch(identifier)
@@ -157,12 +163,19 @@ class DatasetStore:
         if not isinstance(document, dict):
             raise data_integrity("upstream response carries no tender document", uuid=uuid)
         tender = normalize_tender(document)
-        self._index(tender)
-        self._fetched.add(tender.uuid)
+        self._external[tender.uuid] = tender
         return tender
 
     def was_fetched(self, uuid: str) -> bool:
-        return uuid in self._fetched
+        return uuid in self._external
+
+    def source_of(self, uuid: str) -> str:
+        """Where a tender came from, so a reader can trace it."""
+        if uuid in self._tenders:
+            return "prepared_dataset"
+        if uuid in self._external:
+            return "offline_replay" if type(self.client).__name__ == "ReplayClient" else "live_api"
+        return "unknown"
 
     def for_buyer(self, edrpou: str) -> list[Tender]:
         return [self._tenders[uuid] for uuid in self._by_buyer.get(edrpou, ())]

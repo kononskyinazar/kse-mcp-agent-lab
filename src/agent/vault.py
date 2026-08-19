@@ -114,18 +114,6 @@ class ObsidianVault:
     async def append_note(self, path: str, content: str) -> None:
         await self.connection.call(self.require("append"), {"filepath": path, "content": content})
 
-    async def note_exists(self, path: str, marker: str | None = None) -> bool:
-        """Whether the note is already there, optionally carrying a marker."""
-        try:
-            existing = await self.read_note(path)
-        except MCPToolFailure as failure:
-            if failure.code in {"NOT_FOUND", "404"}:
-                return False
-            raise
-        if not existing.strip():
-            return False
-        return marker in existing if marker else True
-
     async def write_finding(
         self, path: str, *, frontmatter: str, body: str, marker: str, heading: str
     ) -> str:
@@ -164,6 +152,7 @@ class ObsidianVault:
         buyers: list[str],
         screened: list[str],
         flagged: list[str],
+        decision: str = "written",
         path: str = RUN_LOG_PATH,
     ) -> str:
         """Record what this run looked at, by appending a block to the run log.
@@ -178,6 +167,7 @@ class ObsidianVault:
                 "",
                 f"## {run_id} — {when}",
                 "",
+                f"- decision: {decision}",
                 f"- buyers: {', '.join(buyers) or 'none'}",
                 f"- screened: {', '.join(screened) or 'none'}",
                 f"- flagged: {', '.join(flagged) or 'none'}",
