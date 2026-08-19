@@ -99,9 +99,13 @@ def build_graph(deps: AgentDeps):
         vault = deps.vault
         watchlist = await vault.read_watchlist(state.get("watchlist_path") or "procurement/watchlist.md")
         prior = await vault.read_prior_findings()
+        logged = await vault.read_run_log()
 
         reviewed = list(watchlist.reviewed_tender_ids)
         reviewed.extend(str(f.get("tender_id")) for f in prior if f.get("tender_id"))
+        for finding in prior:
+            reviewed.extend(str(t) for t in (finding.get("tender_ids") or []))
+        reviewed.extend(logged)
         _, prose = parse_frontmatter(watchlist.raw)
 
         return {
@@ -271,7 +275,20 @@ def build_graph(deps: AgentDeps):
             )
             body = getattr(response, "content", str(response))
             path = findings_path(edrpou, deps.today)
-            identity = finding_id(f"{state.get('run_id')}|{edrpou}|{deps.today.isoformat()}")
+            # Derived from what was found, not from the run id: two runs on the
+            # same day that reach the same conclusion must not produce two
+            # entries, while a run that finds something new must.
+            tender_ids = sorted(r["identifier"] for r in records)
+            identity = finding_id(
+                "|".join(
+                    [
+                        edrpou,
+                        deps.today.isoformat(),
+                        ",".join(tender_ids),
+                        str(max([(r.get("screening") or {}).get("risk_score", 0) for r in records] or [0])),
+                    ]
+                )
+            )
             frontmatter = {
                 "finding_id": identity,
                 "buyer_edrpou": edrpou,
@@ -281,7 +298,7 @@ def build_graph(deps: AgentDeps):
                     [(r.get("screening") or {}).get("risk_score", 0) for r in records] or [0]
                 ),
                 "review_status": "approved" if (state.get("review_decision") or {}).get("approved") else "auto",
-                "tender_ids": [r["identifier"] for r in records],
+                "tender_ids": tender_ids,
                 "evidence_chain_ref": f"{path}#evidence",
             }
             notes.append({"path": path, "frontmatter": frontmatter, "body": body})
@@ -295,21 +312,24 @@ def build_graph(deps: AgentDeps):
 
         skipped: list[str] = []
         for note in state.get("notes") or []:
-            content = _render_frontmatter(note["frontmatter"]) + "\n" + note["body"] + "\n"
             try:
-                outcome = await vault.create_note(
-                    note["path"], content, marker=note["frontmatter"]["finding_id"]
+                outcome = await vault.write_finding(
+                    note["path"],
+                    frontmatter=_render_frontmatter(note["frontmatter"]),
+                    body=note["body"],
+                    marker=note["frontmatter"]["finding_id"],
+                    heading=f"Revision {state.get('run_id')}",
                 )
-                (written if outcome == "created" else skipped).append(note["path"])
+                (written if outcome in {"created", "revised"} else skipped).append(note["path"])
             except (MCPToolFailure, MCPConnectionError) as exc:
                 errors.append(_error(f"write[{note['path']}]", exc))
 
         # State update goes last: if it fails, the notes still exist and their
         # tenders are simply re-screened next run rather than lost.
         try:
-            await _update_watchlist(deps, state)
+            await _append_run_log(deps, state)
         except (MCPToolFailure, MCPConnectionError) as exc:
-            errors.append(_error("update_watchlist", exc))
+            errors.append(_error("append_run_log", exc))
 
         return {"written": written, "skipped_existing": skipped, "errors": errors}
 
@@ -351,17 +371,16 @@ def _render_frontmatter(data: dict[str, Any]) -> str:
     return "---\n" + yaml.safe_dump(data, allow_unicode=True, sort_keys=False) + "---\n"
 
 
-async def _update_watchlist(deps: AgentDeps, state: RunState) -> None:
+async def _append_run_log(deps: AgentDeps, state: RunState) -> None:
     """Record what this run judged so the next run skips it."""
-    vault = deps.vault
-    path = state.get("watchlist_path") or "procurement/watchlist.md"
-    watchlist = await vault.read_watchlist(path)
+    screened = [r["identifier"] for r in state.get("screened") or [] if r.get("identifier")]
+    flagged = [r["identifier"] for r in state.get("flagged") or [] if r.get("identifier")]
+    buyers = [entry["buyer_edrpou"] for entry in state.get("plan") or []]
 
-    reviewed = set(watchlist.reviewed_tender_ids)
-    reviewed.update(r["identifier"] for r in state.get("screened") or [] if r.get("identifier"))
-
-    # The bridge patches frontmatter field by field; there is no whole-file
-    # write, so the analyst's prose is never touched by the agent.
-    await vault.patch_frontmatter(path, "last_reviewed_date", deps.today.isoformat())
-    await vault.patch_frontmatter(path, "last_run_id", str(state.get("run_id")))
-    await vault.patch_frontmatter(path, "reviewed_tender_ids", sorted(reviewed))
+    await deps.vault.append_run_log(
+        str(state.get("run_id")),
+        deps.today.isoformat(),
+        buyers=buyers,
+        screened=screened,
+        flagged=flagged,
+    )

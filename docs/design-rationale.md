@@ -27,20 +27,26 @@ happens:
   `min_value` arguments passed to `find_tenders`. Change the sentence, and a different set
   of tenders is screened — that is the clearest demonstration that the existing server's
   result affects a later step.
-- `reviewed_tender_ids`, plus the frontmatter of every note under
-  `procurement/findings/`, becomes the exclusion list. A tender judged last week is not
-  re-judged this week.
-- The findings note is the output, and the state patch at the end is what makes the next
-  run different from this one.
+- `reviewed_tender_ids`, the `tender_ids` frontmatter of every note under
+  `procurement/findings/`, and the append-only run log together become the exclusion list.
+  Measured on the live vault: 40 ids from the log, 3 from findings notes, 1 seeded by hand,
+  and `find_tenders` for one buyer drops from 150 matches to 140 with the previously
+  screened tenders gone from the head of the list.
+- The findings note is the output, and the run-log entry appended at the end is what makes
+  the next run different from this one.
 
 Remove Obsidian and the agent has no instructions, no memory and nowhere to put a
 conclusion. That is a stronger role than either alternative on the approved list: a
 browser would have re-fetched data the custom server already holds, and weather has no
 bearing on procurement.
 
-The write side is deliberately narrow. The bridge exposes no whole-file write, so findings
-are created by append and the watchlist is updated by patching three frontmatter fields.
-The analyst's prose is never touched by the agent.
+The write side is narrow because the server made it narrow. The bridge exposes no
+whole-file write, and its `obsidian_patch_content` tool fails against the installed plugin
+for every target type — the bridge omits the `Markdown-Patch-Version` header the plugin now
+requires (error 40084). Append is the only write that works. So the run-to-run state is an
+append-only log at `procurement/findings/_run-log.md`, and a re-screen appends a revision
+block rather than rewriting a note. This is a better arrangement than the one originally
+designed: the agent structurally cannot damage what the analyst wrote.
 
 ## 3. Why each custom tool belongs at the MCP boundary
 
@@ -168,7 +174,21 @@ the rule rather than by tuning a number:
 After the corrections: 280 of 533 tenders score zero, 19 land at 80 or above, one genuine
 short-bid-window breach and 18 procedure/threshold mismatches remain.
 
-## 9. Known limitations
+## 9. What the live integration changed
+
+Three things only appeared once the agent talked to a real Obsidian:
+
+- `obsidian_patch_content` fails for every target type against the installed plugin, so the
+  state moved out of watchlist frontmatter into an append-only run log.
+- A same-day re-run appended a second YAML frontmatter block to the same note, which is
+  malformed — only the first is read. Notes now take a revision block instead, and the
+  finding id is derived from what was found rather than from the run id, so an identical
+  re-run changes nothing while a run that finds something new is recorded.
+- Third-party servers report failures as prose, not as a structured error object. The
+  client classifies that text (`ENDPOINT_UNREACHABLE`, `UNAUTHORIZED`, `NOT_FOUND`) and
+  keeps the original message, because "UNKNOWN: no message" is useless at a defence.
+
+## 10. Known limitations
 
 1. Supplier newness is a dataset-horizon proxy, not a registration date.
 2. Shell-bidding detection matches free text and can never block.
@@ -181,7 +201,7 @@ short-bid-window breach and 18 procedure/threshold mismatches remain.
 8. The agent screens what the watchlist names; it does not discover new buyers.
 9. A high score is a prompt for human review, never a conclusion of wrongdoing.
 
-## 10. Assumptions
+## 11. Assumptions
 
 1. The martial-law procurement regime (CMU 1178) is still in force on the tenders in the
    dataset. If it were superseded, `config/statutory_thresholds.yaml` gains a regime with a

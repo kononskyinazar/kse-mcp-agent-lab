@@ -81,10 +81,14 @@ cp .env.example .env
 The vault contains only the demonstration watchlist and one prior findings note. Do not
 point this at a personal vault.
 
-> **Version pin that matters.** The `mcp-obsidian` bridge is written against MCP SDK 1.x.
-> Installed unpinned it pulls SDK 2.x and dies on import before listing a single tool, so
-> `config/mcp.json` launches it as `uvx --with "mcp<2" mcp-obsidian`. The custom server
-> runs on SDK 2.x in its own process — one practical benefit of process separation.
+> **Two things about the bridge, found by running it.** First, `mcp-obsidian` is written
+> against MCP SDK 1.x; installed unpinned it pulls SDK 2.x and dies on import before listing
+> a single tool, so `config/mcp.json` launches it as `uvx --with "mcp<2" mcp-obsidian`. The
+> custom server runs on SDK 2.x in its own process — one practical benefit of process
+> separation. Second, its `obsidian_patch_content` tool fails against the current plugin for
+> every target type (error 40084: the bridge omits the `Markdown-Patch-Version` header), and
+> there is no whole-file write. Append is the only usable write, so the run-to-run state is
+> an append-only log and the agent structurally cannot rewrite the analyst's notes.
 
 ## Running
 
@@ -119,7 +123,7 @@ a different note.
 | `src/agent/` | The agent: MCP client, vault access, LangGraph flow, CLI |
 | `config/` | Watchlist, red-flag rules, statutory thresholds, MCP connections |
 | `data/` | Prepared dataset: 533 raw tender documents plus the harvest manifest |
-| `demo-vault/` | The committed Obsidian vault used for the demonstration |
+| `demo-vault/` | The committed Obsidian vault: watchlist, one seeded finding, and the run log the agent appends |
 | `fixtures/` | Recorded API responses for offline replay |
 | `scripts/` | Dataset harvest, fixture recording, tool-contract generation |
 | `tests/` | 118 tests |

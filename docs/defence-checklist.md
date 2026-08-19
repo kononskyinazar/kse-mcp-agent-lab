@@ -10,7 +10,9 @@ Two terminals, one editor, Obsidian open on `demo-vault/`.
 - [ ] `.env` filled: `OPENROUTER_API_KEY`, `OBSIDIAN_API_KEY`, `PROCUREMENT_MCP_PYTHON`
 - [ ] Obsidian running, Local REST API plugin enabled, vault = `demo-vault/`
 - [ ] `git status` clean; confirm `.env` is untracked
-- [ ] `.venv/bin/python -m pytest -q` → 126 passed
+- [ ] `.venv/bin/python -m pytest -q` → 131 passed
+- [ ] Vault is at its seed state: `procurement/findings/` holds only
+      `findings_01999218_2026-08-18.md`, and no `_run-log.md`
 - [ ] Terminal font enlarged; tool-call logging visible
 - [ ] Know your three inputs in advance:
       **valid** `UA-2026-08-18-004904-a` (blocking: direct contract above the threshold),
@@ -88,8 +90,12 @@ allegation about a named company. Approve it.
 
 **11. Show the written note** in Obsidian: frontmatter with `finding_id`, `buyer_edrpou`,
 `severity_score`, `review_status`, `tender_ids`, `evidence_chain_ref`; body composed from
-the structured evidence. Then show the watchlist frontmatter now carrying the new
-`reviewed_tender_ids` — that is what makes the next run different.
+the structured evidence, citing КМУ № 1178 пункт 10 with the observed value against the
+threshold. Then open `procurement/findings/_run-log.md` and show the entry this run
+appended — that is what makes the next run different. Say why it is a log and not an edited
+field: the bridge's patch tool fails against this plugin version (error 40084) and there is
+no whole-file write, so append is the only write, which means the agent cannot rewrite your
+notes even by mistake.
 
 **12. Explain one contract and one design decision.** `screen_tender_red_flags`: the
 evidence chain, and the fact that the score is a linear sum you can recompute by hand from
@@ -109,10 +115,15 @@ leaves a re-screenable tender rather than a lost one.
 .venv/bin/python -m agent.main
 ```
 
-Expect `MCP CONNECTION FAILURE: MCP server 'obsidian' is unavailable: ...`, exit status 3,
-and **nothing written**. Say why: the read phase precedes every write for exactly this
-reason. (Variant, if quitting is awkward: set `OBSIDIAN_API_KEY=wrong` and show the 401
-path instead.)
+The bridge process still starts — it connects lazily — so the failure surfaces on the first
+tool call, classified from the server's prose as `ENDPOINT_UNREACHABLE` with the underlying
+`Connection refused` kept intact. It happens in `read_vault`, before any write, and the run
+stops there. (Variant, if quitting is awkward: set `OBSIDIAN_API_KEY=wrong` and show the
+401 path, classified `UNAUTHORIZED`.)
+
+Worth saying out loud: third-party servers report failures as prose rather than a structured
+error object, so the client classifies the text and keeps the original message. An error
+reported as "UNKNOWN: no message" would be useless here.
 
 **15. Invalid input to a custom tool**, showing that a failure and an empty result are
 different things:
@@ -153,6 +164,10 @@ except Exception as e: print('unrecorded:', e.code)
 **17. A different valid input.** Edit the watchlist prose — change *"medicines"* to
 *"construction"* — re-run, and show `cpv_prefix` becoming `45`, with a different set of
 tenders screened. Nothing in the code changed.
+
+Second variation worth having ready: run twice without editing anything. The second run
+reads its own run-log entry, excludes those 40 tenders, and screens the next ones —
+measured on the live vault, `find_tenders` for one buyer drops from 150 matches to 140.
 
 **18. Trace one value end to end.** Take the blocking finding on
 `UA-2026-07-06-008728-a`:

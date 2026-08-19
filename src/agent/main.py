@@ -27,6 +27,16 @@ from agent.mcp_client import MCPConnectionError, MCPHub, load_server_specs  # no
 from agent.model import ModelUnavailable, build_model  # noqa: E402
 
 
+def default_interpreter() -> None:
+    """Default the custom server's interpreter to the one running the agent.
+
+    Without this a grader has to know to point PROCUREMENT_MCP_PYTHON at the
+    virtualenv; the system python3 has none of the dependencies and the server
+    dies with ModuleNotFoundError before it can speak MCP.
+    """
+    os.environ.setdefault("PROCUREMENT_MCP_PYTHON", sys.executable)
+
+
 def load_env(path: Path) -> None:
     if not path.exists():
         return
@@ -128,6 +138,7 @@ def main() -> int:
     args = parser.parse_args()
 
     load_env(ROOT / ".env")
+    default_interpreter()
     return anyio.run(lambda: run(args))
 
 

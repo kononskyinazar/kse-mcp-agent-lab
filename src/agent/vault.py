@@ -18,6 +18,9 @@ from .mcp_client import MCPConnection, MCPToolFailure
 
 WATCHLIST_PATH = "procurement/watchlist.md"
 FINDINGS_DIR = "procurement/findings"
+RUN_LOG_PATH = "procurement/findings/_run-log.md"
+
+TENDER_ID = re.compile(r"UA-\d{4}-\d{2}-\d{2}-\d{6}-[a-z]")
 
 FRONTMATTER = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
@@ -50,9 +53,13 @@ class ObsidianVault:
         self.connection = connection
         self.get_file = connection.find_tool("get", "file", "contents") or connection.find_tool("get", "file")
         self.list_files = connection.find_tool("list", "files", "dir") or connection.find_tool("list", "files")
-        # The bridge exposes no whole-file write: content is either appended to
-        # a file (creating it when absent) or patched relative to a heading,
-        # block or frontmatter field. Both paths are used, for different jobs.
+        # The bridge's only usable write is append, which creates the file when
+        # it is absent. There is no whole-file write, and patch_content fails on
+        # this plugin version for every target type: the bridge does not send the
+        # Markdown-Patch-Version header the plugin now requires (error 40084).
+        # The run-to-run state is therefore an append-only log, not an edited
+        # frontmatter field - which also means the agent can never damage what
+        # the analyst wrote.
         self.append = connection.find_tool("append", "content")
         self.patch = connection.find_tool("patch", "content")
 
@@ -119,33 +126,76 @@ class ObsidianVault:
             return False
         return marker in existing if marker else True
 
-    async def create_note(self, path: str, content: str, *, marker: str | None = None) -> str:
-        """Create a note, or leave it alone if the same finding is already there.
+    async def write_finding(
+        self, path: str, *, frontmatter: str, body: str, marker: str, heading: str
+    ) -> str:
+        """Create the note, add a revision block, or do nothing.
 
-        Appending is the only creation path the bridge offers, so writing twice
-        would duplicate the note. The marker - the finding id, derived from the
-        run inputs - makes a re-run after a mid-write failure a no-op instead.
+        Append is the only write the bridge supports here, so the three cases are
+        handled explicitly:
+
+        * note absent - write frontmatter and body;
+        * note present without this marker - append a revision block **without**
+          a second frontmatter block, because only the first one is read and two
+          of them make the note malformed;
+        * note present with this marker - the same findings are already recorded,
+          so a re-run after a partial failure changes nothing.
         """
-        if await self.note_exists(path, marker):
+        try:
+            existing = await self.read_note(path)
+        except MCPToolFailure as failure:
+            if failure.code not in {"NOT_FOUND", "404"}:
+                raise
+            existing = ""
+
+        if marker and marker in existing:
             return "already_present"
-        await self.append_note(path, content)
+        if existing.strip():
+            await self.append_note(path, f"\n\n---\n\n## {heading}\n\n<!-- {marker} -->\n\n{body}\n")
+            return "revised"
+        await self.append_note(path, frontmatter + "\n" + body + "\n")
         return "created"
 
-    async def patch_frontmatter(self, path: str, field: str, value: Any) -> None:
-        """Replace one frontmatter field. Used for the run-to-run state."""
-        import json as _json
+    async def append_run_log(
+        self,
+        run_id: str,
+        when: str,
+        *,
+        buyers: list[str],
+        screened: list[str],
+        flagged: list[str],
+        path: str = RUN_LOG_PATH,
+    ) -> str:
+        """Record what this run looked at, by appending a block to the run log.
 
-        payload = value if isinstance(value, str) else _json.dumps(value, ensure_ascii=False)
-        await self.connection.call(
-            self.require("patch"),
-            {
-                "filepath": path,
-                "operation": "replace",
-                "target_type": "frontmatter",
-                "target": field,
-                "content": payload,
-            },
+        This is the run-to-run memory. It is append-only because that is the only
+        write the bridge actually supports here, and the arrangement is better
+        than the one it replaced: the analyst's own note is never rewritten by
+        the agent.
+        """
+        block = "\n".join(
+            [
+                "",
+                f"## {run_id} — {when}",
+                "",
+                f"- buyers: {', '.join(buyers) or 'none'}",
+                f"- screened: {', '.join(screened) or 'none'}",
+                f"- flagged: {', '.join(flagged) or 'none'}",
+                "",
+            ]
         )
+        await self.append_note(path, block)
+        return path
+
+    async def read_run_log(self, path: str = RUN_LOG_PATH) -> set[str]:
+        """Tender ids screened by previous runs, from the append-only log."""
+        try:
+            text = await self.read_note(path)
+        except MCPToolFailure as failure:
+            if failure.code in {"NOT_FOUND", "404"}:
+                return set()
+            raise
+        return parse_run_log(text)
 
     async def read_watchlist(self, path: str = WATCHLIST_PATH) -> Watchlist:
         raw = await self.read_note(path)
@@ -178,6 +228,20 @@ class ObsidianVault:
             if frontmatter:
                 findings.append({**frontmatter, "note_path": path})
         return findings
+
+
+def parse_run_log(text: str) -> set[str]:
+    """Tender ids recorded by previous runs.
+
+    Kept pure and separate from the fetch so it can be tested, and read, without
+    a running vault.
+    """
+    seen: set[str] = set()
+    for line in (text or "").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- screened:") or stripped.startswith("- flagged:"):
+            seen.update(TENDER_ID.findall(stripped))
+    return seen
 
 
 def findings_path(buyer_edrpou: str, when: date, directory: str = FINDINGS_DIR) -> str:
