@@ -401,3 +401,45 @@ def test_streak_cannot_be_supplied_by_the_caller(tmp_path):
         screen_tool.run(config, store, {"tender_identifier": "UA-2026-06-01-000001-a", "streak_flag": 9})
 
     assert "streak_flag" in str(excinfo.value) or "additionalProperties" in str(excinfo.value)
+
+
+# --- statutory lookup ------------------------------------------------------
+
+def test_the_bid_period_minimum_flips_on_the_day_the_amendment_took_effect():
+    """Постанова КМУ № 382 від 02.04.2024 took effect on 09.04.2024.
+
+    Pinned because an off-by-days boundary would silently accuse tenders
+    published in the gap of a breach that did not exist yet.
+    """
+    from datetime import date
+
+    from procurement_mcp.config import ROOT
+    from procurement_mcp.thresholds import StatutoryBook
+
+    book = StatutoryBook.from_file(ROOT / "config" / "statutory_thresholds.yaml")
+
+    assert book.minimum_tender_period_days("works", date(2024, 4, 8)).value == 7
+    assert book.minimum_tender_period_days("works", date(2024, 4, 9)).value == 14
+    assert book.minimum_tender_period_days("goods_and_services", date(2024, 4, 9)).value == 7
+
+
+def test_every_configured_threshold_cites_a_primary_source():
+    """No number in the rulebook may rest on a secondary source."""
+    from datetime import date
+
+    from procurement_mcp.config import ROOT
+    from procurement_mcp.thresholds import StatutoryBook
+
+    book = StatutoryBook.from_file(ROOT / "config" / "statutory_thresholds.yaml")
+    checks = [
+        book.minimum_tender_period_days("works", date(2026, 8, 1)),
+        book.minimum_tender_period_days("works", date(2023, 1, 1)),
+        book.minimum_tender_period_days("goods_and_services", date(2026, 8, 1)),
+        book.mandatory_open_tender_from("goods_and_services", date(2026, 8, 1)),
+        book.mandatory_open_tender_from("works", date(2026, 8, 1)),
+        book.mandatory_open_tender_from("current_repair_services", date(2026, 8, 1)),
+    ]
+    for hit in checks:
+        assert hit.verification == "primary", f"{hit.subject} rests on a {hit.verification} source"
+        assert hit.source_point, f"{hit.subject} has no citation"
+        assert "zakon.rada.gov.ua" in hit.source

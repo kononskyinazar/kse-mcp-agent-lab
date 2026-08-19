@@ -165,7 +165,7 @@ Response, produced by running the tool against the committed dataset:
   },
   "provenance": {
     "rules_version": "2026-08-19",
-    "thresholds_version": "2026-08-19",
+    "thresholds_version": "2026-08-19b",
   … truncated for the document; the tool returns the full object
 ```
 
@@ -320,7 +320,7 @@ Response, produced by running the tool against the committed dataset:
   },
   "provenance": {
     "rules_version": "2026-08-19",
-    "thresholds_version": "2026-08-19",
+    "thresholds_version": "2026-08-19b",
     "classifier": "ДК 021:2015 (CPV)",
     "mode": "offline-replay"
   },
@@ -439,7 +439,7 @@ Response, produced by running the tool against the committed dataset:
     "regime_name": "Особливості здійснення публічних закупівель (КМУ № 1178 від 12.10.2022)",
     "effective_from": "2022-10-19",
     "effective_to": null,
-    "configuration_version": "2026-08-19",
+    "configuration_version": "2026-08-19b",
     "classifier": "ДК 021:2015 (CPV)",
     "mandatory_open_tender_from": {
       "value": 1500000,
@@ -452,7 +452,7 @@ Response, produced by running the tool against the committed dataset:
   },
   "provenance": {
     "rules_version": "2026-08-19",
-    "thresholds_version": "2026-08-19",
+    "thresholds_version": "2026-08-19b",
     "classifier": "ДК 021:2015 (CPV)",
     "mode": "offline-replay"
   }
@@ -567,9 +567,9 @@ Response, produced by running the tool against the committed dataset:
         "value": 14,
         "subject": "works",
         "regime": "osoblyvosti-1178",
-        "source": "https://dozorro.org/blog/12-kvitnevih-zmin-do-zakupivelnih-pravil",
-        "source_point": null,
-        "verification": "secondary"
+        "source": "https://zakon.rada.gov.ua/laws/show/1178-2022-%D0%BF",
+        "source_point": "пункт 34, у редакції Постанови КМУ № 382 від 02.04.2024",
+        "verification": "primary"
       }
     }
   ],

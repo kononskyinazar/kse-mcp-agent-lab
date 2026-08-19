@@ -195,8 +195,9 @@ Three things only appeared once the agent talked to a real Obsidian:
 3. Specification tailoring is detected lexically; attached documents are not parsed.
 4. Streaks and trends are bounded by the sweep window; every response states it.
 5. The threshold table covers only the periods the dataset spans.
-6. Bid-period minimums are sourced from practice publications, marked `secondary`, and need
-   confirmation against the official text.
+6. The statutory table covers only 2022-10-19 onward, the period the dataset spans. Every
+   figure is primary-sourced, but a tender published under an earlier regime would need a
+   new entry rather than a code change.
 7. Rule weights are judgement, not calibration.
 8. The agent screens what the watchlist names; it does not discover new buyers.
 9. A high score is a prompt for human review, never a conclusion of wrongdoing.

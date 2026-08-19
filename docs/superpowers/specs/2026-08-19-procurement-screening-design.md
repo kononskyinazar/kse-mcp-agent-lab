@@ -186,9 +186,10 @@ never expressible by the same response.
 | `config/mcp.json` | MCP connection definitions, no secrets | Yes |
 | `config/mcp.local.json` | Machine-specific overrides | No, ignored |
 
-**Open item carried into implementation:** every entry in `statutory_thresholds.yaml` must
-be checked against the official text of the governing act before it is committed, and the
-citation stored alongside the value. No threshold is written from memory.
+**Resolved.** Every entry in `statutory_thresholds.yaml` was read from the official text at
+zakon.rada.gov.ua and carries its пункт: пункт 10 for the value thresholds, пункт 34 for the
+bid periods, and the superseded 2022 edition for the pre-amendment figure. A test asserts
+that no threshold rests on a secondary source. Nothing is written from memory.
 
 ## 6. Vault contract
 
