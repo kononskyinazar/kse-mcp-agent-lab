@@ -205,11 +205,18 @@ demo-vault/                            # committed, repo root
       findings_<edrpou>_<YYYY-MM-DD>.md
 ```
 
-Findings frontmatter: `finding_id`, `buyer_edrpou`, `tender_id`, `severity_score`,
-`review_status` (`pending` / `approved` / `rejected`), `evidence_chain_ref`,
-`created`, `run_id`. Watchlist frontmatter carries `last_reviewed_date` and
-`reviewed_tender_ids`, which is how the next run skips what it already judged. Notes are
-append-only; a re-screen adds a revision block rather than overwriting history.
+Findings frontmatter: `finding_id`, `buyer_edrpou`, `tender_ids`, `severity_score`,
+`review_status`, `evidence_chain_ref`, `created`, `run_id`.
+
+**Revised after integrating with a real Obsidian.** The plan was for the watchlist
+frontmatter to carry the state, updated by patching fields. That is not possible: the
+bridge has no whole-file write, and `obsidian_patch_content` fails against the installed
+plugin for every target type (error 40084 - the bridge omits the `Markdown-Patch-Version`
+header). Append is the only usable write. The state therefore lives in an append-only run
+log at `procurement/findings/_run-log.md`, one block per run recording the buyers, the
+tenders screened and the tenders flagged. Notes stay append-only: a re-screen adds a
+revision block, and the finding id is derived from what was found rather than from the run
+id, so an identical re-run is a no-op while a run that finds something new is recorded.
 
 ## 7. Agent flow
 

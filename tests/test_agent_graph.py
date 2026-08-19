@@ -88,7 +88,7 @@ class StubModel:
         return Response()
 
 
-def obsidian_stub(screening_note=WATCHLIST, findings=(), writes=None):
+def obsidian_stub(screening_note=WATCHLIST, findings=(), writes=None, run_log=None):
     writes = writes if writes is not None else []
     patches: list[tuple] = []
 
@@ -97,6 +97,10 @@ def obsidian_stub(screening_note=WATCHLIST, findings=(), writes=None):
             path = arguments.get("filepath", "")
             if "watchlist" in path:
                 return {"text": screening_note}
+            if path.endswith("_run-log.md"):
+                if run_log is None:
+                    raise MCPToolFailure("obsidian", tool, {"error": {"code": "NOT_FOUND", "message": path}})
+                return {"text": run_log}
             for name, body in findings:
                 if path.endswith(name):
                     return {"text": body}
@@ -198,7 +202,7 @@ async def test_vault_state_excludes_already_reviewed_tenders():
 
 
 async def test_prior_findings_notes_extend_the_reviewed_set():
-    prior = ("findings_01999218_2026-08-18.md", "---\ntender_id: UA-from-note\n---\n\nbody")
+    prior = ("findings_01999218_2026-08-18.md", "---\ntender_ids: [UA-from-note]\n---\n\nbody")
     procurement = procurement_stub()
     deps = make_deps(obsidian_stub(findings=[prior]), procurement)
     await run_graph(deps, resume={"approved": True})
@@ -269,11 +273,11 @@ async def test_approval_writes_the_note_then_patches_the_watchlist_state():
     await run_graph(deps, resume={"approved": True}, thread="approve")
 
     assert obsidian.writes[0][0].startswith("procurement/findings/findings_01999218_")
-    # State update comes last, and touches only frontmatter fields: the bridge
-    # offers no whole-file write, so the analyst's prose is never overwritten.
-    assert [target for _, target, _ in obsidian.patches] == [
-        "last_reviewed_date", "last_run_id", "reviewed_tender_ids"
-    ]
+    # The state entry comes last and is appended to its own log. The bridge has
+    # no whole-file write and its patch endpoint fails on this plugin version, so
+    # append is the only write - which also means the analyst's note is untouched.
+    assert obsidian.writes[-1][0].endswith("_run-log.md")
+    assert obsidian.patches == []
 
 
 async def test_rerunning_does_not_duplicate_an_existing_note():
@@ -289,8 +293,12 @@ async def test_rerunning_does_not_duplicate_an_existing_note():
     state_two = await run_graph(deps_two, resume={"approved": True}, thread="dup-2")
 
     assert state_one["written"], "the first run writes the note"
-    assert obsidian_two.writes == [], "the second run must not append a duplicate"
+    findings_writes = [p for p, _ in obsidian_two.writes if "findings_" in p and "_run-log" not in p]
+    assert findings_writes == [], "the second run must not append a duplicate finding"
     assert state_two["skipped_existing"]
+    assert any(p.endswith("_run-log.md") for p, _ in obsidian_two.writes), (
+        "the re-run is still recorded, so its tenders are not screened a third time"
+    )
 
 
 async def test_written_note_carries_the_required_frontmatter():
@@ -318,14 +326,34 @@ async def test_finding_id_is_stable_for_the_same_run_inputs():
     assert finding_id_of(obsidian_a.writes).split(":")[1] != ""
 
 
-async def test_updated_watchlist_records_what_was_screened():
+async def test_the_run_log_records_what_was_screened():
     obsidian = obsidian_stub()
     deps = make_deps(obsidian, procurement_stub(risk_score=90.0))
     await run_graph(deps, resume={"approved": True}, thread="state")
 
-    patched = {target: content for _, target, content in obsidian.patches}
-    assert "UA-new-1" in patched["reviewed_tender_ids"]
-    assert patched["last_reviewed_date"] == "2026-08-19"
+    path, content = obsidian.writes[-1]
+    assert path.endswith("_run-log.md")
+    assert "- screened: UA-new-1" in content
+    assert "- flagged: UA-new-1" in content
+
+
+async def test_a_previous_run_log_entry_excludes_that_tender():
+    """The append-only log is the run-to-run memory; it must change this run."""
+    log = "# Run log\n\n## run-20260818-090000 — 2026-08-18\n\n- screened: UA-2026-08-06-010871-a\n"
+    procurement = procurement_stub()
+    deps = make_deps(obsidian_stub(run_log=log), procurement)
+    await run_graph(deps, resume={"approved": True}, thread="log")
+
+    find_call = next(args for tool, args in procurement.calls if tool == "find_tenders")
+    assert "UA-2026-08-06-010871-a" in find_call["exclude_tender_ids"]
+
+
+async def test_a_missing_run_log_is_not_an_error():
+    obsidian = obsidian_stub(run_log=None)
+    deps = make_deps(obsidian, procurement_stub(risk_score=5.0))
+    state = await run_graph(deps, thread="nolog")
+
+    assert state["written"], "a first run with no log still completes"
 
 
 async def test_obsidian_read_failure_aborts_before_any_write():
@@ -360,3 +388,39 @@ async def test_the_note_is_composed_from_structured_evidence_only():
     payload = json.loads(model.prompts[-1])
     assert payload["buyer"]["edrpou"] == "01999218"
     assert "concentration" in payload and "flagged" in payload
+
+
+# --- run-log parsing -------------------------------------------------------
+
+def test_run_log_parser_reads_screened_and_flagged_ids():
+    from agent.vault import parse_run_log
+
+    text = """# Run log
+
+## run-20260819-115232 — 2026-08-19
+
+- buyers: 31557119, 01999218
+- screened: UA-2026-08-19-006860-a, UA-2026-08-18-004904-a
+- flagged: UA-2026-08-18-004904-a
+"""
+
+    assert parse_run_log(text) == {"UA-2026-08-19-006860-a", "UA-2026-08-18-004904-a"}
+
+
+def test_run_log_parser_ignores_ids_outside_the_recorded_lines():
+    from agent.vault import parse_run_log
+
+    text = "- buyers: 31557119\nSome prose mentioning UA-2026-01-01-000001-a in passing.\n"
+
+    assert parse_run_log(text) == set(), "only the screened and flagged lines are state"
+
+
+def test_run_log_parser_accumulates_across_appended_runs():
+    from agent.vault import parse_run_log
+
+    text = (
+        "## run-a\n\n- screened: UA-2026-08-01-000001-a\n\n"
+        "## run-b\n\n- screened: UA-2026-08-02-000002-a\n"
+    )
+
+    assert len(parse_run_log(text)) == 2, "the log is append-only; every run still counts"

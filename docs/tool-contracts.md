@@ -668,21 +668,32 @@ run and have nowhere to put a conclusion.
 | Side effects | None. Read-only. |
 | Example | Input `{"filepath": "procurement/watchlist.md"}`; output is the watchlist note, whose frontmatter yields four buyer EDRPOUs and one already-reviewed tender id, and whose prose becomes the CPV filter passed to `find_tenders`. |
 
-### Second tool used: `obsidian_patch_content`
+### Second tool used: `obsidian_append_content`
 
-Used for the run-to-run state, because the bridge exposes **no whole-file write**. Content
-is either appended to a file - which creates it when absent - or patched relative to a
-heading, block reference or frontmatter field.
+Used for both writes, because it is the only write that works against this plugin version.
 
 | Contract element | Content |
 |---|---|
-| Name | `obsidian_patch_content` |
-| Model-facing description | "Insert content into an existing note relative to a heading, block reference, or frontmatter field." |
-| Input schema | `filepath` (string, required), `operation` (enum: `append`, `prepend`, `replace`), `target_type` (enum: `heading`, `block`, `frontmatter`), `target` (string - the field or heading), `content` (string) |
-| Output | Confirmation text. |
-| Error conditions | Unknown target field, missing file, or an invalid `operation`/`target_type` combination. |
-| Side effects | **Writes to the vault.** The agent uses it only with `target_type: frontmatter` on three fields - `last_reviewed_date`, `last_run_id`, `reviewed_tender_ids` - so the analyst's prose is never modified by the agent. |
-| Example | `{"filepath": "procurement/watchlist.md", "operation": "replace", "target_type": "frontmatter", "target": "reviewed_tender_ids", "content": "[\"UA-2026-08-06-010871-a\", \"UA-2026-07-06-008728-a\"]"}` |
+| Name | `obsidian_append_content` |
+| Model-facing description | "Append content to a new or existing file in the vault." |
+| Input schema | `filepath` (string, required, `format: path`), `content` (string, required) |
+| Output | `Successfully appended content to <path>` |
+| Error conditions | Endpoint unreachable when Obsidian is not running (classified `ENDPOINT_UNREACHABLE`); 401 on a wrong API key; path errors on an invalid vault path |
+| Side effects | **Writes to the vault.** Creates the file when it does not exist. |
+| Example | `{"filepath": "procurement/findings/_run-log.md", "content": "\n## run-20260819-115232 — 2026-08-19\n\n- screened: UA-…\n"}` |
+
+**`obsidian_patch_content` is advertised but unusable here, and that shaped the design.**
+Every call fails against the installed plugin, for every `target_type`:
+
+> Error 40084: Header-based PATCH targeting is ambiguous between the two patch formats, so
+> it requires an explicit 'Markdown-Patch-Version' header
+
+The bridge does not send that header. Combined with the absence of any whole-file write,
+the vault's usable write surface is **append only**. The run-to-run state is therefore an
+append-only log at `procurement/findings/_run-log.md` rather than an edited frontmatter
+field, and a re-screen adds a revision block instead of a second frontmatter block. The
+arrangement is better than the one it replaced: the agent structurally cannot rewrite what
+the analyst wrote.
 
 **Failure demonstrated at the defence.** Quit Obsidian, or set `OBSIDIAN_API_KEY` to a
 wrong value, and start the agent. The connection fails during startup, the agent prints
