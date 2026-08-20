@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from ..config import Configuration
 from ..errors import invalid_input
-from ..models import Tender
+from ..models import COMPETITIVE_PROCEDURES, DIRECT_AWARD_PROCEDURES, Tender
 from ..store import DatasetStore, coerce_date, require_edrpou
 from .validation import check_arguments
 
@@ -26,21 +26,10 @@ DESCRIPTION = (
 
 MIN_MOMENT = datetime.min.replace(tzinfo=timezone.utc)
 
-PROCEDURE_TYPES = [
-    "aboveThreshold",
-    "aboveThresholdUA",
-    "aboveThresholdEU",
-    "belowThreshold",
-    "priceQuotation",
-    "reporting",
-    "negotiation",
-    "negotiation.quick",
-    "competitiveOrdering",
-    "closeFrameworkAgreementUA",
-    "closeFrameworkAgreementSelectionUA",
-    "esco",
-    "simple.defense",
-]
+# Derived, not restated: a hand-kept second list drifts from the rule set, and
+# a type the enum accepts but the models cannot classify is exactly the bug this
+# import prevents.
+PROCEDURE_TYPES = sorted(COMPETITIVE_PROCEDURES | DIRECT_AWARD_PROCEDURES)
 
 PURPOSE = (
     "Narrow hundreds of tenders down to the handful worth screening, under "

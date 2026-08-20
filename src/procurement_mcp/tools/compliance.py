@@ -18,9 +18,10 @@ DESCRIPTION = (
     "publication date - not today's rules. Handles framework agreements as their "
     "own case, and verifies that the tender classifies its items with CPV-DK "
     "021:2015, which is what every threshold is expressed in terms of. Returns "
-    "compliant true/false, a list of failed conditions each with an explanation "
-    "and a citation, and the exact threshold values and configuration version "
-    "used to decide. Use it for any tender before judging it, because a "
+    "compliant - true when every check passed, false when one failed, and null "
+    "when a check could not be performed at all - a list of failed conditions "
+    "each with an explanation and a citation, any inconclusive checks, and the "
+    "exact threshold values and configuration version used to decide. Use it for any tender before judging it, because a "
     "threshold breach is itself one of the strongest signals."
 )
 
@@ -59,7 +60,11 @@ OUTPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "status": {"type": "string", "enum": ["ok"]},
-        "compliant": {"type": "boolean"},
+        "compliant": {
+            "type": ["boolean", "null"],
+            "description": "true if every check passed, false if one failed, null if a check could not be performed.",
+        },
+        "inconclusive_checks": {"type": "array", "items": {"type": "object"}},
         "tender": {"type": "object"},
         "subject": {"type": "string"},
         "failed_conditions": {"type": "array", "items": {"type": "object"}},
@@ -104,7 +109,19 @@ def run(config: Configuration, store: DatasetStore, arguments: dict[str, Any]) -
     open_from = book.mandatory_open_tender_from(subject, tender.published_at)
     thresholds["mandatory_open_tender_from"] = open_from.to_payload()
 
-    if tender.is_framework:
+    if not tender.is_classified_procedure and not tender.is_framework:
+        checks.append(
+            {
+                "condition": "procedure_matches_value_threshold",
+                "result": "unknown",
+                "explanation": (
+                    f"procedure {tender.procedure_type!r} is not one this rule set classifies; "
+                    f"the value thresholds cannot be applied without knowing whether it awards "
+                    f"directly or invites competition"
+                ),
+            }
+        )
+    elif tender.is_framework:
         checks.append(
             {
                 "condition": "framework_agreement",
@@ -192,9 +209,22 @@ def run(config: Configuration, store: DatasetStore, arguments: dict[str, Any]) -
             }
         )
 
+    # A check that could not be performed must not read as a pass. Reporting
+    # compliant: true for a procedure the rule set cannot classify would assert
+    # a verdict that was never established - the same error this tool now
+    # refuses to make about the procedure type itself.
+    inconclusive = [c for c in checks if c["result"] == "unknown"]
+    if failed:
+        compliant: bool | None = False
+    elif inconclusive:
+        compliant = None
+    else:
+        compliant = True
+
     return {
         "status": "ok",
-        "compliant": not failed,
+        "compliant": compliant,
+        "inconclusive_checks": inconclusive,
         "tender": {
             "tender_id": tender.tender_id,
             "uuid": tender.uuid,

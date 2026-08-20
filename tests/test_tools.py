@@ -271,12 +271,36 @@ def test_skipped_rules_are_reported_with_reasons(tmp_path):
 # --- store robustness ------------------------------------------------------
 
 def test_one_unreadable_document_does_not_lose_the_dataset(tmp_path):
-    store = make_store(tmp_path, [tender_doc(uuid="good01", tender_id="UA-good")])
+    make_store(tmp_path, [tender_doc(uuid="good01", tender_id="UA-good")])
     write_broken_document(tmp_path, "broken.json", {"no": "id"})
-    reloaded = type(store)(tmp_path).load()
+    # The manifest must account for both files; an unexplained extra document is
+    # a different failure, covered by the next test.
+    manifest = json.loads((tmp_path / "manifest.json").read_text())
+    manifest["documents_written"] = 2
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    from procurement_mcp.store import DatasetStore
+
+    reloaded = DatasetStore(tmp_path).load()
 
     assert len(reloaded) == 1
     assert reloaded.skipped[0]["file"] == "broken.json"
+
+
+def test_documents_from_a_second_sweep_are_refused_rather_than_merged(tmp_path):
+    """Loading the union of two harvests would make every window figure wrong."""
+    from procurement_mcp.store import DatasetStore
+
+    make_store(tmp_path, [tender_doc(uuid="sweep01", tender_id="UA-one")])
+    write_broken_document(tmp_path, "leftover.json", {"id": "leftover", "tenderID": "UA-old",
+                                                     "procurementMethodType": "reporting"})
+
+    with pytest.raises(ToolError) as excinfo:
+        DatasetStore(tmp_path).load()
+
+    assert excinfo.value.code == ErrorCode.DATA_INTEGRITY
+    assert excinfo.value.details["documents_found"] == 2
+    assert excinfo.value.details["documents_in_manifest"] == 1
 
 
 def test_missing_dataset_directory_is_reported_clearly(tmp_path):
@@ -445,3 +469,25 @@ def test_every_advertised_input_field_carries_a_constraint():
             if not constrained:
                 loose.append(f"{tool.name}.{name}")
     assert not loose, f"unconstrained input fields: {loose}"
+
+
+def test_an_unperformable_check_is_inconclusive_not_compliant(tmp_path):
+    """Reporting compliant: true for a check that never ran asserts a verdict."""
+    document = tender_doc(uuid="unkn01", tender_id="UA-unknown",
+                          procedure="competitiveDialogueUA.stage2", amount=5_000_000.0,
+                          category="works")
+    store = make_store(tmp_path, [document])
+    result = compliance.run(make_config(tmp_path), store, {"tender_identifier": "UA-unknown"})
+
+    assert result["compliant"] is None
+    assert result["inconclusive_checks"][0]["result"] == "unknown"
+    assert "not one this rule set classifies" in result["inconclusive_checks"][0]["explanation"]
+
+
+def test_a_clean_tender_is_still_positively_compliant(tmp_path):
+    document = tender_doc(uuid="clean1", tender_id="UA-clean", amount=500_000.0)
+    store = make_store(tmp_path, [document])
+    result = compliance.run(make_config(tmp_path), store, {"tender_identifier": "UA-clean"})
+
+    assert result["compliant"] is True
+    assert result["inconclusive_checks"] == []

@@ -193,7 +193,28 @@ secondary source implied, and the 14-day works minimum took effect on 09.04.2024
 Current state of the corpus: 257 of 533 tenders score zero, 19 land at 80 or above, one
 genuine short-bid-window breach and 18 procedure/threshold mismatches.
 
-## 9. Known limitations
+## 9. What a whole-project review changed
+
+A review of the shipped code, rather than of a diff, found five more defects worth naming:
+
+- A re-sweep left the previous harvest on disk, so the store would load the union of two
+  datasets while the manifest described only the later one. A sweep now replaces, and the
+  store refuses to load when its document count disagrees with the manifest.
+- An unrecognised procedure type was reported as "already a competitive procedure" - a
+  claim the code had never established, which would also have exempted an unknown
+  direct-award type from the threshold check. Unknown is now its own answer, and the
+  retrieval tool's procedure enum is derived from the rule set instead of restated, so the
+  two cannot drift apart again.
+- `harvest.py measure` extrapolated rows-per-day from a slice that had been cut short by
+  the request cap. That mistake had already produced an estimate twice the real figure
+  during development. It now refuses to estimate and says why.
+- The human-review threshold existed in two places, the server's configuration and the
+  agent's command line. The server owns it now and publishes its verdict; the agent defers.
+- Config and data paths were resolved relative to the package, which is the repository root
+  only for an editable install, while `pyproject.toml` advertised a console script that a
+  normal install would break. The root is located by looking for the configuration itself.
+
+## 10. Known limitations
 
 1. Supplier newness is a dataset-horizon proxy, not a registration date.
 2. Shell-bidding detection matches free text and can never block.
@@ -207,7 +228,7 @@ genuine short-bid-window breach and 18 procedure/threshold mismatches.
 8. The agent screens what the watchlist names; it does not discover new buyers.
 9. A high score is a prompt for human review, never a conclusion of wrongdoing.
 
-## 10. Assumptions
+## 11. Assumptions
 
 1. The martial-law procurement regime (CMU 1178) is still in force on the tenders in the
    dataset. If it were superseded, `config/statutory_thresholds.yaml` gains a regime with a
