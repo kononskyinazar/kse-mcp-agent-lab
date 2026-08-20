@@ -45,6 +45,13 @@ runs/
 # README says how. Last rule wins in gitignore, so this stays at the end.
 demo-vault/.obsidian/
 
+# The demonstration vault ships at its seed state: one prior findings note, no
+# run log. Everything the agent writes is a run artefact - committing it would
+# mean a grader's first run has nothing left to demonstrate, because those
+# tenders would already be in the memory.
+demo-vault/procurement/findings/*
+!demo-vault/procurement/findings/findings_01999218_2026-08-18.md
+
 # Personal defence notes: the spoken script stays on this machine. The committed
 # defence-checklist.md is what satisfies submission item 7 ("checklist or script").
 docs/defence-script.md
