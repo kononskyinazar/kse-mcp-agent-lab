@@ -60,13 +60,15 @@ EXAMPLE_ARGUMENTS = {"buyer_edrpou": "01999218", "cpv_prefix": "336", "limit": 2
 INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
-        "buyer_edrpou": {"type": "string", "minLength": 8, "maxLength": 10,
+        "buyer_edrpou": {"type": "string", "pattern": "^[0-9]{8}$|^[0-9]{10}$", "minLength": 8, "maxLength": 10,
                           "description": "Buyer's EDRPOU code."},
-        "supplier_edrpou": {"type": "string", "minLength": 8, "maxLength": 10,
+        "supplier_edrpou": {"type": "string", "pattern": "^[0-9]{8}$|^[0-9]{10}$", "minLength": 8, "maxLength": 10,
                              "description": "EDRPOU of a supplier that won an award."},
-        "published_from": {"type": "string", "description": "ISO date; publication date lower bound."},
-        "published_to": {"type": "string", "description": "ISO date; publication date upper bound."},
-        "cpv_prefix": {"type": "string", "minLength": 2, "maxLength": 10,
+        "published_from": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}",
+                            "description": "ISO date; publication date lower bound."},
+        "published_to": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}",
+                          "description": "ISO date; publication date upper bound."},
+        "cpv_prefix": {"type": "string", "pattern": "^[0-9]{2,8}(-[0-9])?$", "minLength": 2, "maxLength": 10,
                         "description": "CPV-DK 021:2015 code prefix, e.g. '336' for medical supplies."},
         "procedure_types": {
             "type": "array",

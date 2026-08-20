@@ -199,7 +199,7 @@ from the code or if anything that looks like a key is committed.
 |---|---|
 | [Tool contracts](docs/tool-contracts.md) | Part C — every custom tool, generated from the running code, plus the Obsidian contract |
 | [Design rationale](docs/design-rationale.md) | Why each piece exists, the trade-offs, the limitations |
-| [Defence checklist](docs/defence-checklist.md) | The demonstration script |
+| [Defence checklist](docs/defence-checklist.md) | Submission item 7 - the demonstration script |
 | [Design spec](docs/superpowers/specs/2026-08-19-procurement-screening-design.md) | Architecture and data strategy |
 | [Upgrade review](docs/upgrade-review.md) | API feasibility evidence and the reasoning behind each rule |
 | [Plan review](docs/plan-review.md) | Critical review of the supplied draft plan |

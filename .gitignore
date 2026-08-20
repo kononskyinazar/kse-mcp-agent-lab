@@ -45,6 +45,10 @@ runs/
 # README says how. Last rule wins in gitignore, so this stays at the end.
 demo-vault/.obsidian/
 
+# Personal defence notes: the spoken script stays on this machine. The committed
+# defence-checklist.md is what satisfies submission item 7 ("checklist or script").
+docs/defence-script.md
+
 # --- os / editor ---
 .DS_Store
 .idea/

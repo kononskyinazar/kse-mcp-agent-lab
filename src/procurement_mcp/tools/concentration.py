@@ -42,16 +42,21 @@ INPUT_SCHEMA: dict[str, Any] = {
     "properties": {
         "buyer_edrpou": {
             "type": "string",
+            "pattern": "^[0-9]{8}$|^[0-9]{10}$",
             "minLength": 8,
             "maxLength": 10,
             "description": "Ukrainian EDRPOU code of the buyer: 8 digits, or 10 for some registrations.",
         },
         "published_from": {
             "type": "string",
+            "format": "date",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}",
             "description": "Optional ISO date. Counts only tenders published on or after it.",
         },
         "published_to": {
             "type": "string",
+            "format": "date",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}",
             "description": "Optional ISO date. Counts only tenders published on or before it.",
         },
         "include_trend": {
