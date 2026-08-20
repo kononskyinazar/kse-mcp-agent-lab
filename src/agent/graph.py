@@ -60,7 +60,6 @@ class AgentDeps:
     model: Any
     obsidian_server: str = "obsidian"
     procurement_server: str = "procurement"
-    human_review_threshold: float = 60.0
     require_approval: bool = True
     today: date = field(default_factory=lambda: datetime.now(UTC).date())
 
@@ -241,12 +240,19 @@ def build_graph(deps: AgentDeps):
                     errors.append(record[f"{key}_error"])
             screened.append(record)
 
+        # The threshold belongs to the server, which publishes its verdict as
+        # requires_human_review. Keeping a second copy here meant the two could
+        # disagree about when a person must see an allegation.
+        #
+        # `compliant is not True` deliberately catches null as well as false: a
+        # compliance check that could not be performed is a reason to look, not
+        # a reason to pass.
         flagged = [
             r
             for r in screened
             if (r.get("screening") or {}).get("has_blocking")
-            or (r.get("screening") or {}).get("risk_score", 0) >= deps.human_review_threshold
-            or (r.get("compliance") or {}).get("compliant") is False
+            or (r.get("screening") or {}).get("requires_human_review")
+            or (r.get("compliance") or {}).get("compliant") is not True
         ]
         return {"screened": screened, "flagged": flagged, "errors": errors}
 

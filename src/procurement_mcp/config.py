@@ -12,7 +12,24 @@ import yaml
 from .errors import data_integrity
 from .thresholds import StatutoryBook
 
-ROOT = Path(__file__).resolve().parents[2]
+def _project_root() -> Path:
+    """Locate the checkout that carries config/ and data/.
+
+    Path(__file__).parents[2] is the repository root only for an editable
+    install; installed normally it lands in site-packages, and the declared
+    console script would look for rules.yaml there. So: walk up from the module
+    and from the working directory looking for the marker, and fall back to the
+    working directory, where the environment variables can still point the way.
+    """
+    marker = Path("config") / "rules.yaml"
+    for start in (Path(__file__).resolve(), Path.cwd().resolve() / "_"):
+        for candidate in start.parents:
+            if (candidate / marker).is_file():
+                return candidate
+    return Path.cwd().resolve()
+
+
+ROOT = _project_root()
 
 
 def _flag(name: str, default: bool) -> bool:
@@ -87,4 +104,6 @@ class Configuration:
             "thresholds_version": self.statutes.version,
             "classifier": self.statutes.classifier,
             "mode": "offline-replay" if self.settings.offline else "live",
+            # Published so the agent does not keep a second copy of the policy.
+            "human_review_threshold": self.rule_book.human_review_threshold,
         }

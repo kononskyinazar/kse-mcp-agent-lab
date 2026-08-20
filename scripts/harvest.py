@@ -25,6 +25,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import yaml  # noqa: E402
 
+from procurement_mcp.normalize import parse_datetime  # noqa: E402
 from procurement_mcp.harvest import (  # noqa: E402
     count_buyers,
     fetch_documents,
@@ -49,13 +50,18 @@ def select_documents(kept, *, max_per_buyer: int) -> list[str]:
     Capping per buyer rather than globally keeps the concentration comparison
     balanced; capping at all is recorded in the manifest.
     """
+    # Timestamps are parsed rather than compared as strings: Prozorro returns
+    # +02:00 in winter and +03:00 in summer, so lexicographic order stops being
+    # chronological order across the change.
+    epoch = datetime.min.replace(tzinfo=UTC)
     by_buyer: dict[str, list] = {}
     for uuid, row in kept.items():
-        by_buyer.setdefault(row.buyer_edrpou or "", []).append((row.date_modified or "", uuid))
+        moment = parse_datetime(row.date_modified) or epoch
+        by_buyer.setdefault(row.buyer_edrpou or "", []).append((moment, uuid))
 
     selected: list[str] = []
     for rows in by_buyer.values():
-        rows.sort(reverse=True)
+        rows.sort(key=lambda item: (item[0], item[1]), reverse=True)
         selected.extend(uuid for _, uuid in rows[:max_per_buyer])
     return sorted(selected)
 
@@ -74,9 +80,18 @@ def cmd_measure(args: argparse.Namespace) -> int:
         f"window {args.hours}h | requests {stats.requests} | rows {stats.rows_seen} "
         f"| distinct tenders {stats.unique_tenders} | {elapsed:.0f}s | {stats.stopped_because}"
     )
-    if stats.rows_seen:
+    truncated = stats.stopped_because == "max_requests_reached"
+    if stats.rows_seen and not truncated:
         per_hour = stats.rows_seen / max(args.hours, 1)
         print(f"observed feed volume: ~{per_hour * 24:,.0f} rows/day")
+    elif truncated:
+        # Dividing a truncated slice by the requested window overstates the rate.
+        # This exact mistake put the first estimate at twice the real figure.
+        print(
+            f"feed volume NOT estimated: the walk stopped at the {args.max_requests}-request "
+            f"cap before covering {args.hours}h, so rows/day cannot be inferred from it. "
+            f"Re-run with --max-requests above {stats.requests} for a usable figure."
+        )
     print(f"\ntop {args.top} buyers by distinct tenders in this slice:")
     for edrpou, (name, count) in ranked:
         print(f"  {edrpou:<12} {count:>5}  {name[:70]}")
@@ -91,6 +106,10 @@ def cmd_measure(args: argparse.Namespace) -> int:
                     "distinct_tenders": stats.unique_tenders,
                     "elapsed_seconds": round(elapsed, 1),
                     "stopped_because": stats.stopped_because,
+                    "covered_the_requested_window": not truncated,
+                    "rows_per_day_estimate": (
+                        round(stats.rows_seen / max(args.hours, 1) * 24) if not truncated else None
+                    ),
                     "buyers": [
                         {"edrpou": e, "name": n, "tenders": c} for e, (n, c) in ranked
                     ],

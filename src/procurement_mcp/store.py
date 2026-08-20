@@ -108,7 +108,23 @@ class DatasetStore:
             self._index(tender)
 
         self._loaded = True
+        self._verify_against_manifest()
         return self
+
+    def _verify_against_manifest(self) -> None:
+        """The manifest and the directory must agree, or neither can be trusted."""
+        expected = self._manifest.get("documents_written")
+        if expected is None:
+            return
+        actual = len(self._tenders) + len(self._skipped)
+        if actual != expected:
+            raise ToolError(
+                ErrorCode.DATA_INTEGRITY,
+                f"the dataset holds {actual} documents but the manifest records {expected}; "
+                f"the directory probably contains documents from more than one sweep",
+                {"documents_found": actual, "documents_in_manifest": expected,
+                 "directory": str(self.directory / "tenders")},
+            )
 
     def _index(self, tender: Tender) -> None:
         self._tenders[tender.uuid] = tender
