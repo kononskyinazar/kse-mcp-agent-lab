@@ -154,62 +154,46 @@ applicability matrix instead, which is inspectable; a tuned curve would not be.
 **Committed dataset over live queries.** Costs freshness, buys a demonstration that runs
 with the network unplugged and produces the same answer twice.
 
-## 8. What real data changed
+## 8. What contact with reality changed
 
-Three rules were wrong in ways only real data showed, and each was corrected by *narrowing*
-the rule rather than by tuning a number:
+Twelve defects were found by running the thing rather than by writing more tests, and each
+was corrected by *narrowing* a rule or a claim rather than by tuning a number. They are
+listed because the corrections are the strongest evidence that the rules mean something.
 
-- The open-tender minimum bid period does not govern `priceQuotation`, which runs under a
-  separate order. The first version applied it anyway and flagged **all 68** price
-  quotations in the dataset as statutory breaches. There is now no configured minimum for
-  that procedure and the rule reports itself as not applicable, naming the reason.
-- A direct contract is signed at its own stated value, so the award always equals the
-  expectation. The "no discount" rule fired on **220** direct contracts, meaning nothing.
-  It no longer applies to them.
-- A four-month dataset cannot tell a genuinely new supplier from one that simply predates
-  the window. The novelty rule now refuses to fire when the dataset does not reach back
-  far enough to support the claim, and its weight is low because even when it does apply it
-  fires for most awarded tenders at this horizon.
+**Against real procurement data.** The open-tender minimum bid period does not govern
+`priceQuotation`, which runs under a separate order; the first version applied it anyway and
+flagged **all 68** price quotations in the dataset as statutory breaches. A direct contract
+is signed at its own stated value, so the "no discount" rule fired on **220** direct
+contracts and meant nothing. A four-month dataset cannot tell a genuinely new supplier from
+one that simply predates the window, so the novelty rule now refuses to fire when the
+horizon is too short.
 
-After the corrections: 280 of 533 tenders score zero, 19 land at 80 or above, one genuine
-short-bid-window breach and 18 procedure/threshold mismatches remain.
+**Against a real Obsidian.** `obsidian_patch_content` fails for every target type against
+the installed plugin, and there is no whole-file write, so the run-to-run state moved into
+an append-only log — which also means the agent cannot rewrite the analyst's prose. A
+same-day re-run appended a second YAML frontmatter block, which is malformed, so notes take
+a revision block and the finding id is derived from what was found rather than from the run
+id. Third-party servers report failures as prose rather than a structured object, so the
+client classifies the text and keeps the original message; "UNKNOWN: no message" is useless
+at a defence.
 
-## 9. What review and live use changed
+**Against a review of the finished code.** A tender fetched from a fixture was being indexed
+into the prepared dataset, making concentration answers depend on call order. A refusal at
+the human gate left no trace at all, so the next run asked the same question. A competitive
+tender that nobody bid on was skipped as unjudgeable while one that drew a single bidder was
+flagged — 33 of them in the dataset. A joint award broke every streak, because two suppliers
+on one award produce two adjacent rows with different codes. The trend direction compared
+only the first and last month, so a spike in between read as stable. And any non-empty
+resume value approved the write, because `bool("no")` is true.
 
-A review of the finished code found six correctness defects that the tests as written could
-not have caught, and each is worth naming because each was a wrong idea rather than a typo:
+**Against the official legal text.** The bid-period clause is пункт 34, not 54 as the
+secondary source implied, and the 14-day works minimum took effect on 09.04.2024 rather than
+19.04 — a ten-day window in which tenders would have been judged by a rule not yet in force.
 
-- **A tender fetched from a fixture or the live API was being indexed into the prepared
-  dataset**, so running the replay demo before the concentration demo changed the
-  concentration numbers. Fetched records are now held apart, and the screening result says
-  which of the two it came from.
-- **A refusal at the human gate left no trace at all** - no note, and no log entry either -
-  so the next run asked the same question again. A refusal is now recorded as a decision.
-- **A competitive tender that nobody bid on was skipped** as unjudgeable, while one that
-  drew a single bidder was flagged. The dataset holds 33 of them.
-- **A joint award broke every streak**: two suppliers on one award produced two adjacent
-  events with different codes, so a consortium winning repeatedly reported no streak.
-  Streaks now count tenders, not supplier rows.
-- **The trend direction compared only the first and last month**, so a spike in the middle
-  read as stable. It is now a least-squares slope, and months with no awards are listed
-  rather than silently closing the gap.
-- **Any non-empty resume value approved the write**, because `bool("no")` is true.
+Current state of the corpus: 257 of 533 tenders score zero, 19 land at 80 or above, one
+genuine short-bid-window breach and 18 procedure/threshold mismatches.
 
-## 10. What the live integration changed
-
-Three things only appeared once the agent talked to a real Obsidian:
-
-- `obsidian_patch_content` fails for every target type against the installed plugin, so the
-  state moved out of watchlist frontmatter into an append-only run log.
-- A same-day re-run appended a second YAML frontmatter block to the same note, which is
-  malformed — only the first is read. Notes now take a revision block instead, and the
-  finding id is derived from what was found rather than from the run id, so an identical
-  re-run changes nothing while a run that finds something new is recorded.
-- Third-party servers report failures as prose, not as a structured error object. The
-  client classifies that text (`ENDPOINT_UNREACHABLE`, `UNAUTHORIZED`, `NOT_FOUND`) and
-  keeps the original message, because "UNKNOWN: no message" is useless at a defence.
-
-## 11. Known limitations
+## 9. Known limitations
 
 1. Supplier newness is a dataset-horizon proxy, not a registration date.
 2. Shell-bidding detection matches free text and can never block.
@@ -223,7 +207,7 @@ Three things only appeared once the agent talked to a real Obsidian:
 8. The agent screens what the watchlist names; it does not discover new buyers.
 9. A high score is a prompt for human review, never a conclusion of wrongdoing.
 
-## 12. Assumptions
+## 10. Assumptions
 
 1. The martial-law procurement regime (CMU 1178) is still in force on the tenders in the
    dataset. If it were superseded, `config/statutory_thresholds.yaml` gains a regime with a

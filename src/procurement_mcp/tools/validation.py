@@ -8,6 +8,7 @@ did not touch.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ..errors import invalid_input
@@ -67,6 +68,14 @@ def _check_value(value: Any, spec: dict[str, Any], *, field: str, tool: str) -> 
                 received=type(value).__name__,
             )
 
+    if "pattern" in spec and isinstance(value, str) and not re.match(spec["pattern"], value):
+        raise invalid_input(
+            f"{field} does not match the required format",
+            field=field,
+            tool=tool,
+            expected_pattern=spec["pattern"],
+            received=value,
+        )
     if "enum" in spec and value not in spec["enum"]:
         raise invalid_input(
             f"{field} must be one of {spec['enum']}", field=field, tool=tool, received=value

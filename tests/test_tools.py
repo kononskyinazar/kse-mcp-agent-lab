@@ -413,3 +413,35 @@ def test_undated_tenders_sort_last_not_first(world):
     result = find.run(config, store, {})
 
     assert result["tenders"][0]["published_at"] is not None
+
+
+def test_declared_patterns_are_actually_enforced(world):
+    """A pattern in the advertised schema must not be decorative."""
+    config, store = world
+
+    for bad in ("1234567", "123456789", "0000000a", "00-00-00-00"):
+        with pytest.raises(ToolError) as excinfo:
+            concentration.run(config, store, {"buyer_edrpou": bad})
+        assert excinfo.value.code == ErrorCode.INVALID_INPUT
+
+    with pytest.raises(ToolError) as excinfo:
+        find.run(config, store, {"published_from": "01/06/2026"})
+    assert excinfo.value.code == ErrorCode.INVALID_INPUT
+    assert "expected_pattern" in excinfo.value.details
+
+
+def test_every_advertised_input_field_carries_a_constraint():
+    """Rubric wording: schemas must be explicit and constrained, not free strings."""
+    from procurement_mcp.server import ToolHost
+
+    loose = []
+    for tool in ToolHost().describe():
+        for name, spec in tool.input_schema.get("properties", {}).items():
+            constrained = any(
+                key in spec
+                for key in ("enum", "pattern", "minimum", "maximum", "minLength", "maxLength",
+                            "maxItems", "items", "default")
+            )
+            if not constrained:
+                loose.append(f"{tool.name}.{name}")
+    assert not loose, f"unconstrained input fields: {loose}"
