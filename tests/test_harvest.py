@@ -188,3 +188,31 @@ def test_truncation_is_recorded_in_the_manifest(tmp_path):
 
     assert manifest["documents_truncated_to"] == 1
     assert manifest["matching_tenders_available"] == 50
+
+
+def test_a_new_sweep_removes_the_previous_one(tmp_path):
+    """Otherwise the store loads two harvests while the manifest describes one."""
+    first = write_dataset(
+        tmp_path, {"old1": {"id": "old1"}, "old2": {"id": "old2"}},
+        stats=SweepStats(), failures=[], window={}, api_host="test", elapsed_seconds=0.0,
+    )
+    second = write_dataset(
+        tmp_path, {"new1": {"id": "new1"}},
+        stats=SweepStats(), failures=[], window={}, api_host="test", elapsed_seconds=0.0,
+    )
+
+    assert first["documents_written"] == 2
+    assert second["documents_written"] == 1
+    assert second["stale_documents_removed"] == 2
+    assert sorted(p.name for p in (tmp_path / "tenders").glob("*")) == ["new1.json.gz"]
+
+
+def test_an_append_only_sweep_is_possible_when_asked_for(tmp_path):
+    write_dataset(tmp_path, {"a": {"id": "a"}}, stats=SweepStats(), failures=[], window={},
+                  api_host="test", elapsed_seconds=0.0)
+    manifest = write_dataset(tmp_path, {"b": {"id": "b"}}, stats=SweepStats(), failures=[],
+                             window={}, api_host="test", elapsed_seconds=0.0,
+                             replace_existing=False)
+
+    assert manifest["stale_documents_removed"] == 0
+    assert len(list((tmp_path / "tenders").glob("*"))) == 2

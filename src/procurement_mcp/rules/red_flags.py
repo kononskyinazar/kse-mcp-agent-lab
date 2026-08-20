@@ -94,6 +94,11 @@ class ProcedureThresholdMismatch:
         tender = ctx.tender
         if tender.is_framework:
             return "framework selection is governed by the agreement, not by the value thresholds"
+        if not tender.is_classified_procedure:
+            return (
+                f"procedure {tender.procedure_type!r} is not one this rule set classifies, "
+                f"so no threshold rule can be applied to it"
+            )
         if not tender.is_direct_award:
             return f"procedure {tender.procedure_type!r} is already a competitive procedure"
         if tender.amount is None:

@@ -66,12 +66,7 @@ async def run(args: argparse.Namespace) -> int:
                 print(json.dumps(report, indent=2, ensure_ascii=False))
                 return 0
 
-            deps = AgentDeps(
-                hub=hub,
-                model=build_model(),
-                human_review_threshold=args.review_threshold,
-                require_approval=not args.no_approval,
-            )
+            deps = AgentDeps(hub=hub, model=build_model(), require_approval=not args.no_approval)
             graph = build_graph(deps)
 
             from langgraph.checkpoint.memory import InMemorySaver
@@ -130,7 +125,6 @@ def main() -> int:
     parser.add_argument("--config", default=str(ROOT / "config" / "mcp.json"))
     parser.add_argument("--watchlist", default="procurement/watchlist.md")
     parser.add_argument("--thread", default="defence")
-    parser.add_argument("--review-threshold", type=float, default=60.0)
     parser.add_argument("--no-approval", action="store_true", help="skip the human approval gate")
     parser.add_argument("--dry-run", action="store_true", help="stop at the approval gate")
     parser.add_argument("--check", action="store_true", help="connect, list tools, exit")

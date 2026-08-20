@@ -115,6 +115,11 @@ Useful flags: `--dry-run` stops at the approval gate and writes nothing, `--no-a
 skips the gate, `--only procurement` connects to one server, `--watchlist PATH` points at
 a different note.
 
+When a tender needs a human is decided by `human_review_threshold` in
+[`config/rules.yaml`](config/rules.yaml) alone. The server publishes its verdict as
+`requires_human_review`, and the agent defers to it rather than keeping a second copy of
+the policy.
+
 ## Repository layout
 
 | Path | Contents |
@@ -137,7 +142,10 @@ a municipal hospital, a district heating company and a university — harvested 
 needs no key and no account.
 
 The harvest is committed, so nothing has to be downloaded to reproduce the demonstration.
-To rebuild it:
+A rebuild **replaces** the previous one rather than adding to it, and the store refuses to
+load a directory whose document count disagrees with the manifest — otherwise it would
+silently serve the union of two harvests while the manifest described only the later one.
+To rebuild:
 
 ```bash
 .venv/bin/python scripts/harvest.py measure --hours 24    # size the window from observation

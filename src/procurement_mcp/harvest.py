@@ -192,6 +192,7 @@ def write_dataset(
     swept_at: str | None = None,
     compress: bool = True,
     truncated_to: int | None = None,
+    replace_existing: bool = True,
 ) -> dict[str, Any]:
     """Write raw documents plus the manifest the design promises.
 
@@ -201,6 +202,16 @@ def write_dataset(
     """
     tenders_dir = directory / "tenders"
     tenders_dir.mkdir(parents=True, exist_ok=True)
+
+    # A sweep describes exactly what it fetched. Leaving an earlier sweep's
+    # documents in place would make the store load the union of several
+    # harvests while the manifest described only the last one, so every window
+    # figure the tools quote would be wrong with nothing to reveal it.
+    removed = 0
+    if replace_existing:
+        for stale in [*tenders_dir.glob("*.json"), *tenders_dir.glob("*.json.gz")]:
+            stale.unlink()
+            removed += 1
 
     for uuid, document in documents.items():
         blob = json.dumps(document, ensure_ascii=False, indent=1).encode("utf-8")
@@ -224,6 +235,7 @@ def write_dataset(
         "failures": failures,
         "stopped_because": stats.stopped_because,
         "compressed": compress,
+        "stale_documents_removed": removed,
         # A bounded harvest must say it was bounded; a silent cap reads as
         # "this is everything" when it is not.
         "documents_truncated_to": truncated_to,

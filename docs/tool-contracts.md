@@ -40,7 +40,7 @@ python scripts/generate_tool_docs.py
 | `published_from` | string | no | — | — | ISO date; publication date lower bound. |
 | `published_to` | string | no | — | — | ISO date; publication date upper bound. |
 | `cpv_prefix` | string | no | minLength 2; maxLength 10 | — | CPV-DK 021:2015 code prefix, e.g. '336' for medical supplies. |
-| `procedure_types` | array | no | maxItems 8; items enum: `aboveThreshold`, `aboveThresholdUA`, `aboveThresholdEU`, `belowThreshold`, `priceQuotation`… | — | Restrict to these procedure types. |
+| `procedure_types` | array | no | maxItems 8; items enum: `aboveThreshold`, `aboveThresholdEU`, `aboveThresholdUA`, `aboveThresholdUA.defense`, `belowThreshold`… | — | Restrict to these procedure types. |
 | `min_value` | number | no | minimum 0 | — | Expected value lower bound, UAH. |
 | `max_value` | number | no | minimum 0 | — | Expected value upper bound, UAH. |
 | `region` | string | no | minLength 3; maxLength 80 | — | Buyer region, matched case-insensitively as a substring. |
@@ -322,7 +322,8 @@ Response, produced by running the tool against the committed dataset:
     "rules_version": "2026-08-19",
     "thresholds_version": "2026-08-19b",
     "classifier": "ДК 021:2015 (CPV)",
-    "mode": "offline-replay"
+    "mode": "offline-replay",
+    "human_review_threshold": 60.0
   },
   "trend": {
     "buckets": [
@@ -335,8 +336,6 @@ Response, produced by running the tool against the committed dataset:
         "month": "2026-07",
         "awards": 37,
         "hhi_by_value": 0.1819
-      },
-      {
   … truncated for the document; the tool returns the full object
 ```
 
@@ -350,7 +349,7 @@ Response, produced by running the tool against the committed dataset:
 
 **Model-facing description** (the exact string exposed over MCP):
 
-> Check whether the procurement procedure a tender used is consistent with the Ukrainian value thresholds and category rules that were in force on its publication date - not today's rules. Handles framework agreements as their own case, and verifies that the tender classifies its items with CPV-DK 021:2015, which is what every threshold is expressed in terms of. Returns compliant true/false, a list of failed conditions each with an explanation and a citation, and the exact threshold values and configuration version used to decide. Use it for any tender before judging it, because a threshold breach is itself one of the strongest signals.
+> Check whether the procurement procedure a tender used is consistent with the Ukrainian value thresholds and category rules that were in force on its publication date - not today's rules. Handles framework agreements as their own case, and verifies that the tender classifies its items with CPV-DK 021:2015, which is what every threshold is expressed in terms of. Returns compliant - true when every check passed, false when one failed, and null when a check could not be performed at all - a list of failed conditions each with an explanation and a citation, any inconclusive checks, and the exact threshold values and configuration version used to decide. Use it for any tender before judging it, because a threshold breach is itself one of the strongest signals.
 
 **Input schema**
 
@@ -364,7 +363,8 @@ Response, produced by running the tool against the committed dataset:
 | Field | Type | Meaning |
 |---|---|---|
 | `status` | string |  |
-| `compliant` | boolean |  |
+| `compliant` | boolean or null | true if every check passed, false if one failed, null if a check could not be performed. |
+| `inconclusive_checks` | array |  |
 | `tender` | object |  |
 | `subject` | string |  |
 | `failed_conditions` | array |  |
@@ -401,6 +401,7 @@ Response, produced by running the tool against the committed dataset:
 {
   "status": "ok",
   "compliant": false,
+  "inconclusive_checks": [],
   "tender": {
     "tender_id": "UA-2026-08-18-004904-a",
     "uuid": "db0404bbe451471bb4126b576ffaa39c",
@@ -454,7 +455,8 @@ Response, produced by running the tool against the committed dataset:
     "rules_version": "2026-08-19",
     "thresholds_version": "2026-08-19b",
     "classifier": "ДК 021:2015 (CPV)",
-    "mode": "offline-replay"
+    "mode": "offline-replay",
+    "human_review_threshold": 60.0
   }
 }
 ```

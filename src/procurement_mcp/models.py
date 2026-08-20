@@ -154,6 +154,17 @@ class Tender:
         return self.procedure_type in FRAMEWORK_PROCEDURES
 
     @property
+    def is_classified_procedure(self) -> bool:
+        """Whether this procedure type is one the rule set actually knows.
+
+        Prozorro publishes more types than are enumerated here. Saying "unknown"
+        is honest; treating an unrecognised type as competitive would exempt a
+        direct-award procedure from the value-threshold check while claiming a
+        classification that was never made.
+        """
+        return self.is_competitive_procedure or self.is_direct_award
+
+    @property
     def active_award(self) -> Award | None:
         for award in self.awards:
             if award.is_active:

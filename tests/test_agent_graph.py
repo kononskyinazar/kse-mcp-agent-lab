@@ -126,7 +126,8 @@ def obsidian_stub(screening_note=WATCHLIST, findings=(), writes=None, run_log=No
     return connection
 
 
-def procurement_stub(*, risk_score=15.0, has_blocking=False, compliant=True, fail_tool=None):
+def procurement_stub(*, risk_score=15.0, has_blocking=False, compliant=True, fail_tool=None,
+                     review_threshold=60.0):
     def handler(tool, arguments):
         if fail_tool == tool:
             raise MCPToolFailure("procurement", tool, {"error": {"code": "DATA_INTEGRITY", "message": "boom"}})
@@ -153,6 +154,10 @@ def procurement_stub(*, risk_score=15.0, has_blocking=False, compliant=True, fai
                 "status": "ok",
                 "risk_score": risk_score,
                 "has_blocking": has_blocking,
+                # The server owns the policy and publishes its verdict; the agent
+                # no longer keeps a threshold of its own.
+                "requires_human_review": has_blocking or risk_score >= review_threshold,
+                "provenance": {"human_review_threshold": review_threshold},
                 "blocking_violations": [{"rule_id": "bid_window_below_statutory_minimum"}] if has_blocking else [],
                 "advisories": [],
             }
@@ -246,6 +251,17 @@ async def test_blocking_violation_forces_the_human_gate():
 
     assert state.get("__interrupt__"), "a blocking violation must stop for a human even at a low score"
     assert obsidian.writes == [], "nothing may be written before approval"
+
+
+async def test_the_agent_defers_to_the_servers_review_verdict():
+    """The threshold lives in config/rules.yaml, not in the agent."""
+    obsidian = obsidian_stub()
+    # Score below the agent's old hard-coded 60, but the server says review it.
+    deps = make_deps(obsidian, procurement_stub(risk_score=30.0, review_threshold=25.0))
+    compiled = build_graph(deps).compile(checkpointer=InMemorySaver())
+    state = await compiled.ainvoke({}, config={"configurable": {"thread_id": "defer"}})
+
+    assert state.get("__interrupt__"), "the server's verdict must decide, not a second copy of it"
 
 
 async def test_low_score_without_blocking_skips_the_gate():
