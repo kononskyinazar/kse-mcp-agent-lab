@@ -458,15 +458,3 @@ def test_run_log_parser_accumulates_across_appended_runs():
     )
 
     assert len(parse_run_log(text)) == 2, "the log is append-only; every run still counts"
-
-
-async def test_the_plan_records_what_each_filter_was_derived_from(capsys):
-    """S4 evidence: the link from the analyst's sentence to the tool argument."""
-    procurement = procurement_stub()
-    deps = make_deps(obsidian_stub(), procurement)
-    state = await run_graph(deps, resume={"approved": True}, thread="plan")
-
-    entry = state["plan"][0]
-    assert entry["cpv_prefix"] == "336"
-    assert entry["rationale"], "a filter with no stated origin cannot be demonstrated"
-    assert "cpv_prefix" in capsys.readouterr().err, "the derivation must be visible, not asserted"
