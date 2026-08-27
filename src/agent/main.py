@@ -93,6 +93,18 @@ async def run(args: argparse.Namespace) -> int:
                 json.dumps(
                     {
                         "run_id": state.get("run_id"),
+                        "plan": [
+                            {
+                                "buyer_edrpou": e["buyer_edrpou"],
+                                "filters": {
+                                    k: e[k]
+                                    for k in ("cpv_prefix", "min_value", "procedure_types", "limit")
+                                    if e.get(k)
+                                },
+                                "derived_from": e.get("rationale"),
+                            }
+                            for e in state.get("plan") or []
+                        ],
                         "buyers": len(state.get("plan") or []),
                         "candidates": len(state.get("candidates") or []),
                         "screened": len(state.get("screened") or []),
