@@ -13,6 +13,7 @@ prompt:
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Annotated, Any, TypedDict
@@ -179,6 +180,21 @@ def build_graph(deps: AgentDeps):
             entry["buyer_name"] = buyer.get("name")
             entry["limit"] = min(int(entry.get("limit") or DEFAULT_LIMIT), MAX_LIMIT)
             resolved.append(entry)
+
+        # Printed because it is the observable link between what the analyst
+        # wrote in the vault and the arguments the custom server receives. A
+        # demonstration that this connection exists cannot rest on the operator
+        # asserting it.
+        for entry in resolved:
+            filters = {
+                key: entry[key]
+                for key in ("cpv_prefix", "min_value", "procedure_types", "limit")
+                if entry.get(key)
+            }
+            print(
+                f"  plan {entry['buyer_edrpou']}: {filters} <- {entry.get('rationale')}",
+                file=sys.stderr,
+            )
         return {"plan": resolved}
 
     async def buyer_context(state: RunState) -> RunState:
